@@ -707,7 +707,19 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
         const totalHead = projectedNonMfg.reduce((sum, e) => sum + (e.headcount || 1), 0);
         const nmlInflation = Math.pow(1 + (project.inflationRatePercent || 0) / 100, yr - 1);
 
-        project.nonManufacturingLaborBenefits.forEach((b) => {
+        const customNonMfgBenefits = (project.nonManufacturingLaborBenefits || []).filter((b) => {
+          const n = (b.name || '').toLowerCase();
+          return (
+            !n.includes('sss') &&
+            !n.includes('social security') &&
+            !n.includes('philhealth') &&
+            !n.includes('pag-ibig') &&
+            !n.includes('hdmf') &&
+            !n.includes('13th')
+          );
+        });
+
+        customNonMfgBenefits.forEach((b) => {
           if (b.type === 'percentage') {
             const rate = (b.rateOrAmount || 0) / 100;
             opexNonStatutoryBenefits += totalBasic * 12 * rate;

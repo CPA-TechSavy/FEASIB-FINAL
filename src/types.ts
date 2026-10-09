@@ -74,7 +74,7 @@ export interface DirectLaborItem {
   pieceRatePerUnit?: number; // Alias for ratePerPiece
   productId?: string; // Optional specific product id or 'all' (default: 'all')
   monthlyWage: number;
-  monthsPerYear: number; // 13 for 13th month pay standard in many academic jurisdictions
+  monthsPerYear: number; // Standard 12 operating months per year
   annualSalaryIncreaseType?: 'percentage' | 'amount'; // 'percentage' e.g. 5% or 'amount' e.g. ₱500/mo
   annualSalaryIncreaseValue?: number; // annual increase value (% or ₱/month)
   annualSalaryIncreaseStartYear?: number; // Year the salary increase begins (e.g. Year 2, 3, 4, 5. Defaults to 2)

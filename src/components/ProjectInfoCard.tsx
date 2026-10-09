@@ -9,7 +9,6 @@ import {
   Edit3,
   Check,
   Landmark,
-  Lock,
 } from 'lucide-react';
 import { formatCurrency } from '../utils/financialCalculations';
 
@@ -113,15 +112,7 @@ export default function ProjectInfoCard({
             </span>
           )}
 
-          {isDemoMode ? (
-            <div
-              className="px-3 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 flex items-center gap-1.5 shadow-2xs select-none"
-              title="Editing is disabled in Demo Mode"
-            >
-              <Lock className="w-3.5 h-3.5 text-amber-600" />
-              <span>Demo Data (Read-Only)</span>
-            </div>
-          ) : (
+          {!isDemoMode && (
             <button
               onClick={() => setIsEditing(!isEditing)}
               className="px-3 sm:px-3.5 py-1.5 sm:py-1 rounded-lg text-xs font-medium border border-slate-200 hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 transition cursor-pointer min-h-[38px] sm:min-h-0"

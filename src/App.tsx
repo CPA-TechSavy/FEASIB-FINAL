@@ -38,13 +38,9 @@ import {
   Sliders,
   Table,
   BookOpen,
-  Cloud,
   CheckCircle2,
   Landmark,
   ChevronDown,
-  Lock,
-  LogOut,
-  Eye,
 } from 'lucide-react';
 
 const STORAGE_KEY = 'undergrad_feasibility_cleanslate_v1';
@@ -413,33 +409,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100/70 text-slate-900 pb-20 md:pb-0">
-      {/* Sticky Demo Mode Top Banner */}
-      {isDemoMode && (
-        <div className="no-print bg-gradient-to-r from-amber-600 via-amber-700 to-indigo-900 text-white px-3 sm:px-6 py-2.5 text-xs font-semibold flex flex-col sm:flex-row items-center justify-between gap-2 shadow-lg sticky top-0 z-50">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-6 h-6 rounded-lg bg-black/25 flex items-center justify-center shrink-0">
-              <Lock className="w-3.5 h-3.5 text-amber-200" />
-            </div>
-            <div className="min-w-0 text-left">
-              <span className="font-extrabold uppercase tracking-wide text-amber-200 mr-2">
-                Demo Mode (Read-Only):
-              </span>
-              <span className="text-amber-50">
-                You are exploring pre-existing artisan cold brew beverage manufacturing data. All amounts and inputs are locked for demonstration only.
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleExitDemo}
-            className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs shadow-xs transition cursor-pointer flex items-center gap-1.5 shrink-0"
-          >
-            <LogOut className="w-3.5 h-3.5 text-slate-700" />
-            <span>Exit Demo &amp; Sign In</span>
-          </button>
-        </div>
-      )}
-
       {/* URL Approval Notification Banner */}
       {urlApprovalNotice && (
         <div className="bg-emerald-900 text-emerald-100 px-4 py-2.5 text-xs font-semibold flex items-center justify-between shadow-md">

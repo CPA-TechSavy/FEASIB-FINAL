@@ -3,6 +3,7 @@ import { FeasibilityProject, ProductItem } from '../types';
 import {
   formatCurrency,
   calculateYear1FactoryOverhead,
+  calculateLaborItemWageForYear,
 } from '../utils/financialCalculations';
 import {
   Calculator,
@@ -46,14 +47,13 @@ export default function CostingTab({
     setTimeout(() => setFeedbackMessage(null), 3500);
   };
 
-  // Aggregates for benchmarks
+  // Aggregates for benchmarks directly sourced from Tab 5 (Direct Labor) and Tab 6 (Factory Overhead)
   const totalDirectLaborAnnual = useMemo(() => {
-    return project.directLabor.reduce(
-      (sum, lab) =>
-        sum + (lab.monthlyWage || 0) * (lab.monthsPerYear || 12) * (lab.headcount || 1),
+    return (project.directLabor || []).reduce(
+      (sum, lab) => sum + calculateLaborItemWageForYear(lab, project, 1).annualWage,
       0
     );
-  }, [project.directLabor]);
+  }, [project.directLabor, project.products]);
 
   const totalYear1Volume = useMemo(() => {
     return project.products.reduce((sum, p) => sum + (p.year1Volume || 0), 0);
@@ -75,8 +75,11 @@ export default function CostingTab({
     return Math.round((totalFactoryOverheadAnnual / totalYear1Volume) * 100) / 100;
   }, [totalFactoryOverheadAnnual, totalYear1Volume]);
 
-  // Helpers to retrieve product components
+  // Helpers to retrieve product components aligned with Schedules 4 (DM BOM), 5 (DL), and 6 (FOH)
   const getProductDm = (p: ProductItem): number => {
+    if (p.costBreakdown && p.costBreakdown.length > 0) {
+      return Math.round(p.costBreakdown.reduce((sum, comp) => sum + (comp.totalCost || 0), 0) * 100) / 100;
+    }
     if (p.rawMaterialsCostPerUnit !== undefined) {
       return p.rawMaterialsCostPerUnit;
     }
@@ -87,14 +90,21 @@ export default function CostingTab({
   };
 
   const getProductDl = (p: ProductItem): number => {
-    if (p.directLaborCostPerUnit !== undefined) {
+    const mode = p.dlCostMode || 'volume_share';
+    if (mode === 'custom' && p.directLaborCostPerUnit !== undefined) {
       return p.directLaborCostPerUnit;
+    }
+    if (mode === 'hourly_time') {
+      const mins = Math.max(0, p.laborMinutesPerUnit || 0);
+      const rate = Math.max(0, p.laborHourlyRate || 0);
+      return Math.round(((mins / 60) * rate) * 100) / 100;
     }
     return volumeWeightedDlPerUnit;
   };
 
   const getProductFoh = (p: ProductItem): number => {
-    if (p.factoryOverheadCostPerUnit !== undefined) {
+    const mode = p.fohCostMode || 'volume_share';
+    if (mode === 'custom' && p.factoryOverheadCostPerUnit !== undefined) {
       return p.factoryOverheadCostPerUnit;
     }
     return volumeWeightedFohPerUnit;

@@ -272,17 +272,39 @@ export default function AssumptionsEditor({
   };
 
   const updateNonManufacturingLaborBenefits = (newBenefits: LaborBenefitItem[]) => {
-    onUpdateProject({ ...project, nonManufacturingLaborBenefits: newBenefits });
+    const sanitized = newBenefits.filter((b) => !isStatutoryLaborBenefit(b));
+    onUpdateProject({ ...project, nonManufacturingLaborBenefits: sanitized });
   };
 
   const toggleIncludeLaborBenefitsInCOGS = (include: boolean) => {
     onUpdateProject({ ...project, includeLaborBenefitsInCOGS: include });
   };
 
-  // Clean up any duplicated 13th month entry from custom non-statutory benefits since it's now directly in the Production Employee Benefits Schedule
+  const isStatutoryLaborBenefit = (b: { name?: string; id?: string }): boolean => {
+    const n = (b.name || '').toLowerCase();
+    const id = (b.id || '').toLowerCase();
+    return (
+      n.includes('sss') ||
+      n.includes('social security') ||
+      n.includes('philhealth') ||
+      n.includes('pag-ibig') ||
+      n.includes('pagibig') ||
+      n.includes('hdmf') ||
+      n.includes('13th') ||
+      n.includes('thirteenth') ||
+      id.includes('sss') ||
+      id.includes('philhealth') ||
+      id.includes('pagibig') ||
+      id.includes('pag-ibig') ||
+      id.includes('13th')
+    );
+  };
+
+  // Clean up any statutory benefits (13th Month, SSS, PhilHealth, Pag-IBIG) from custom non-statutory benefits
+  // since they are already computed in the Production Employee Benefits Schedule
   useEffect(() => {
     const list = project.productionLaborBenefits || [];
-    const filtered = list.filter((b) => !(b.name || '').toLowerCase().includes('13th'));
+    const filtered = list.filter((b) => !isStatutoryLaborBenefit(b));
     if (filtered.length !== list.length) {
       updateProductionLaborBenefits(filtered);
     }
@@ -290,7 +312,7 @@ export default function AssumptionsEditor({
 
   useEffect(() => {
     const list = project.nonManufacturingLaborBenefits || [];
-    const filtered = list.filter((b) => !(b.name || '').toLowerCase().includes('13th'));
+    const filtered = list.filter((b) => !isStatutoryLaborBenefit(b));
     if (filtered.length !== list.length) {
       updateNonManufacturingLaborBenefits(filtered);
     }
@@ -746,7 +768,9 @@ export default function AssumptionsEditor({
   const totalFactoryOverheadYr1 = year1FohSummary.totalFactoryOverheadAnnual;
   const includeBenefitsInCOGS = project.includeLaborBenefitsInCOGS !== false;
   const totalProductionLaborBenefitsAnnual = year1FohSummary.factoryLaborBenefitsAnnual;
-  const laborBenefitsList = project.productionLaborBenefits || [];
+  const laborBenefitsList = (project.productionLaborBenefits || []).filter(
+    (b) => !isStatutoryLaborBenefit(b)
+  );
 
   // Itemized Supplies
   const factorySuppliesList = project.factorySupplies || [];
@@ -764,7 +788,9 @@ export default function AssumptionsEditor({
     0
   );
 
-  const nonMfgLaborBenefitsList = project.nonManufacturingLaborBenefits || [];
+  const nonMfgLaborBenefitsList = useMemo(() => {
+    return (project.nonManufacturingLaborBenefits || []).filter((b) => !isStatutoryLaborBenefit(b));
+  }, [project.nonManufacturingLaborBenefits]);
 
   const projectedNonMfgList = useMemo(() => {
     return (project.nonManufacturingLabor || []).map((emp) => ({
@@ -1093,21 +1119,6 @@ export default function AssumptionsEditor({
           </div>
 
           <div className={`p-4 sm:p-6 ${isDemoMode ? 'demo-readonly-inputs' : ''}`}>
-            {isDemoMode && (
-              <div className="mb-5 p-3.5 sm:p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 flex items-start gap-3 text-xs shadow-2xs">
-                <div className="p-1.5 rounded-lg bg-amber-100 text-amber-800 shrink-0 mt-0.5">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-extrabold uppercase tracking-wide text-amber-950 text-xs mb-0.5">
-                    Read-Only Demo Mode (Data Locked)
-                  </div>
-                  <div className="text-amber-900/90 leading-relaxed text-[11px] sm:text-xs">
-                    You are exploring pre-existing artisan cold brew beverage manufacturing feasibility data. All values, prices, BOM specifications, staffing wages, factory overhead, and capital parameters are displayed for demonstration and <strong>cannot be edited</strong>. Sign in with Google to create your own custom project.
-                  </div>
-                </div>
-              </div>
-            )}
             {/* TAB 1: CAPITAL OUTLAY & FINANCING */}
             {activeTab === 'capital' && (
               <div id="assumptions-tab-capital" className="space-y-6">
@@ -2003,7 +2014,7 @@ export default function AssumptionsEditor({
                               dailyRate: 692,
                               daysPerMonth: 26,
                               monthlyWage: 17992,
-                              monthsPerYear: 13,
+                              monthsPerYear: 12,
                             },
                           ])
                         }
@@ -2045,10 +2056,21 @@ export default function AssumptionsEditor({
                             const wageInfo = calculateLaborItemWageForYear(lab, project, dlViewYear);
                             const isPiece = lab.wageType === 'piece_rate';
                             const daysInMonth = lab.daysPerMonth || 26;
-                            const dailyRateVal = lab.dailyRate !== undefined
+                            const baseDailyRate = lab.dailyRate !== undefined
                               ? lab.dailyRate
                               : (lab.monthlyWage ? Math.round((lab.monthlyWage / daysInMonth) * 100) / 100 : 0);
-                            const pieceRateVal = lab.pieceRatePerUnit ?? 0;
+                            const dailyRateVal = dlViewYear === 1
+                              ? baseDailyRate
+                              : (wageInfo.dailyRate !== undefined && wageInfo.dailyRate > 0
+                                  ? Math.round(wageInfo.dailyRate * 100) / 100
+                                  : Math.round((wageInfo.monthlyWage / daysInMonth) * 100) / 100);
+
+                            const basePieceRate = lab.pieceRatePerUnit ?? 0;
+                            const pieceRateVal = dlViewYear === 1
+                              ? basePieceRate
+                              : (wageInfo.pieceRatePerUnit !== undefined && wageInfo.pieceRatePerUnit > 0
+                                  ? Math.round(wageInfo.pieceRatePerUnit * 100) / 100
+                                  : Math.round((wageInfo.ratePerPiece || basePieceRate) * 100) / 100);
                             const incType = lab.annualSalaryIncreaseType || 'percentage';
                             const incVal = lab.annualSalaryIncreaseValue ?? 0;
 
@@ -2119,16 +2141,36 @@ export default function AssumptionsEditor({
                                           value={dailyRateVal || ''}
                                           onChange={(e) => {
                                             const copy = [...project.directLabor];
-                                            const newDaily = parseFloat(e.target.value) || 0;
+                                            const inputDaily = parseFloat(e.target.value) || 0;
                                             const days = copy[idx].daysPerMonth || 26;
-                                            copy[idx].dailyRate = newDaily;
-                                            copy[idx].daysPerMonth = days;
-                                            copy[idx].monthlyWage = Math.round(newDaily * days);
+                                            if (dlViewYear === 1) {
+                                              copy[idx].dailyRate = inputDaily;
+                                              copy[idx].daysPerMonth = days;
+                                              copy[idx].monthlyWage = Math.round(inputDaily * days);
+                                            } else {
+                                              let baseDaily = inputDaily;
+                                              if (incType === 'amount') {
+                                                const dailyInc = incVal / days;
+                                                baseDaily = Math.max(0, inputDaily - dailyInc * (dlViewYear - 1));
+                                              } else {
+                                                const rate = incVal !== 0 || lab.annualSalaryIncreaseValue !== undefined ? incVal : (project.inflationRatePercent || 0);
+                                                const growth = Math.pow(1 + rate / 100, dlViewYear - 1);
+                                                baseDaily = growth > 0 ? Math.round((inputDaily / growth) * 100) / 100 : inputDaily;
+                                              }
+                                              copy[idx].dailyRate = Math.round(baseDaily * 100) / 100;
+                                              copy[idx].daysPerMonth = days;
+                                              copy[idx].monthlyWage = Math.round(baseDaily * days);
+                                            }
                                             updateDirectLabor(copy);
                                           }}
                                           className="w-20 font-financial font-semibold text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs focus:border-indigo-500 focus:outline-none"
                                         />
                                       </div>
+                                      {dlViewYear > 1 && (
+                                        <span className="text-[9px] text-indigo-700 font-medium">
+                                          Base Yr 1: {c}{baseDailyRate}
+                                        </span>
+                                      )}
                                       <div className="flex items-center gap-1 text-[10px] text-slate-500">
                                         <span>Days/mo:</span>
                                         <input
@@ -2161,16 +2203,34 @@ export default function AssumptionsEditor({
                                           value={pieceRateVal || ''}
                                           onChange={(e) => {
                                             const copy = [...project.directLabor];
-                                            const newRate = parseFloat(e.target.value) || 0;
-                                            copy[idx].pieceRatePerUnit = newRate;
+                                            const inputRate = parseFloat(e.target.value) || 0;
                                             const yr1Vol = project.products.reduce((s, p) => s + (p.year1Volume || 0), 0);
                                             const months = copy[idx].monthsPerYear || 12;
-                                            copy[idx].monthlyWage = months > 0 ? Math.round((newRate * yr1Vol) / months) : 0;
+                                            if (dlViewYear === 1) {
+                                              copy[idx].pieceRatePerUnit = inputRate;
+                                              copy[idx].monthlyWage = months > 0 ? Math.round((inputRate * yr1Vol) / months) : 0;
+                                            } else {
+                                              let basePiece = inputRate;
+                                              if (incType === 'amount') {
+                                                basePiece = Math.max(0, inputRate - incVal * (dlViewYear - 1));
+                                              } else {
+                                                const rate = incVal !== 0 || lab.annualSalaryIncreaseValue !== undefined ? incVal : (project.inflationRatePercent || 0);
+                                                const growth = Math.pow(1 + rate / 100, dlViewYear - 1);
+                                                basePiece = growth > 0 ? Math.round((inputRate / growth) * 100) / 100 : inputRate;
+                                              }
+                                              copy[idx].pieceRatePerUnit = Math.round(basePiece * 100) / 100;
+                                              copy[idx].monthlyWage = months > 0 ? Math.round((basePiece * yr1Vol) / months) : 0;
+                                            }
                                             updateDirectLabor(copy);
                                           }}
                                           className="w-20 font-financial font-bold text-right border border-emerald-300 rounded px-1.5 py-0.5 text-xs text-emerald-900 bg-emerald-50/40 focus:border-emerald-600 focus:outline-none"
                                         />
                                       </div>
+                                      {dlViewYear > 1 && (
+                                        <span className="text-[9px] text-emerald-700 font-medium">
+                                          Base Yr 1: {c}{basePieceRate}
+                                        </span>
+                                      )}
                                       <span className="text-[10px] text-slate-500">
                                         × {wageInfo.yearVolume.toLocaleString()} units
                                       </span>
@@ -2574,7 +2634,7 @@ export default function AssumptionsEditor({
                             dailyRate: 846,
                             daysPerMonth: 26,
                             monthlyWage: 21996,
-                            monthsPerYear: 13,
+                            monthsPerYear: 12,
                           },
                         ])
                       }
@@ -2615,10 +2675,21 @@ export default function AssumptionsEditor({
                             const wageInfo = calculateLaborItemWageForYear(lab, project, fohViewYear);
                             const isPiece = lab.wageType === 'piece_rate';
                             const daysInMonth = lab.daysPerMonth || 26;
-                            const dailyRateVal = lab.dailyRate !== undefined
+                            const baseDailyRate = lab.dailyRate !== undefined
                               ? lab.dailyRate
                               : (lab.monthlyWage ? Math.round((lab.monthlyWage / daysInMonth) * 100) / 100 : 0);
-                            const pieceRateVal = lab.pieceRatePerUnit ?? 0;
+                            const dailyRateVal = fohViewYear === 1
+                              ? baseDailyRate
+                              : (wageInfo.dailyRate !== undefined && wageInfo.dailyRate > 0
+                                  ? Math.round(wageInfo.dailyRate * 100) / 100
+                                  : Math.round((wageInfo.monthlyWage / daysInMonth) * 100) / 100);
+
+                            const basePieceRate = lab.pieceRatePerUnit ?? 0;
+                            const pieceRateVal = fohViewYear === 1
+                              ? basePieceRate
+                              : (wageInfo.pieceRatePerUnit !== undefined && wageInfo.pieceRatePerUnit > 0
+                                  ? Math.round(wageInfo.pieceRatePerUnit * 100) / 100
+                                  : Math.round((wageInfo.ratePerPiece || basePieceRate) * 100) / 100);
                             const incType = lab.annualSalaryIncreaseType || 'percentage';
                             const incVal = lab.annualSalaryIncreaseValue ?? 0;
 
@@ -2689,16 +2760,36 @@ export default function AssumptionsEditor({
                                           value={dailyRateVal || ''}
                                           onChange={(e) => {
                                             const copy = [...(project.indirectLabor || [])];
-                                            const newDaily = parseFloat(e.target.value) || 0;
+                                            const inputDaily = parseFloat(e.target.value) || 0;
                                             const days = copy[idx].daysPerMonth || 26;
-                                            copy[idx].dailyRate = newDaily;
-                                            copy[idx].daysPerMonth = days;
-                                            copy[idx].monthlyWage = Math.round(newDaily * days);
+                                            if (fohViewYear === 1) {
+                                              copy[idx].dailyRate = inputDaily;
+                                              copy[idx].daysPerMonth = days;
+                                              copy[idx].monthlyWage = Math.round(inputDaily * days);
+                                            } else {
+                                              let baseDaily = inputDaily;
+                                              if (incType === 'amount') {
+                                                const dailyInc = incVal / days;
+                                                baseDaily = Math.max(0, inputDaily - dailyInc * (fohViewYear - 1));
+                                              } else {
+                                                const rate = incVal !== 0 || lab.annualSalaryIncreaseValue !== undefined ? incVal : (project.inflationRatePercent || 0);
+                                                const growth = Math.pow(1 + rate / 100, fohViewYear - 1);
+                                                baseDaily = growth > 0 ? Math.round((inputDaily / growth) * 100) / 100 : inputDaily;
+                                              }
+                                              copy[idx].dailyRate = Math.round(baseDaily * 100) / 100;
+                                              copy[idx].daysPerMonth = days;
+                                              copy[idx].monthlyWage = Math.round(baseDaily * days);
+                                            }
                                             updateIndirectLabor(copy);
                                           }}
                                           className="w-20 font-financial font-semibold text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs focus:border-amber-500 focus:outline-none"
                                         />
                                       </div>
+                                      {fohViewYear > 1 && (
+                                        <span className="text-[9px] text-amber-700 font-medium">
+                                          Base Yr 1: {c}{baseDailyRate}
+                                        </span>
+                                      )}
                                       <div className="flex items-center gap-1 text-[10px] text-slate-500">
                                         <span>Days/mo:</span>
                                         <input
@@ -2731,16 +2822,34 @@ export default function AssumptionsEditor({
                                           value={pieceRateVal || ''}
                                           onChange={(e) => {
                                             const copy = [...(project.indirectLabor || [])];
-                                            const newRate = parseFloat(e.target.value) || 0;
-                                            copy[idx].pieceRatePerUnit = newRate;
+                                            const inputRate = parseFloat(e.target.value) || 0;
                                             const yr1Vol = project.products.reduce((s, p) => s + (p.year1Volume || 0), 0);
                                             const months = copy[idx].monthsPerYear || 12;
-                                            copy[idx].monthlyWage = months > 0 ? Math.round((newRate * yr1Vol) / months) : 0;
+                                            if (fohViewYear === 1) {
+                                              copy[idx].pieceRatePerUnit = inputRate;
+                                              copy[idx].monthlyWage = months > 0 ? Math.round((inputRate * yr1Vol) / months) : 0;
+                                            } else {
+                                              let basePiece = inputRate;
+                                              if (incType === 'amount') {
+                                                basePiece = Math.max(0, inputRate - incVal * (fohViewYear - 1));
+                                              } else {
+                                                const rate = incVal !== 0 || lab.annualSalaryIncreaseValue !== undefined ? incVal : (project.inflationRatePercent || 0);
+                                                const growth = Math.pow(1 + rate / 100, fohViewYear - 1);
+                                                basePiece = growth > 0 ? Math.round((inputRate / growth) * 100) / 100 : inputRate;
+                                              }
+                                              copy[idx].pieceRatePerUnit = Math.round(basePiece * 100) / 100;
+                                              copy[idx].monthlyWage = months > 0 ? Math.round((basePiece * yr1Vol) / months) : 0;
+                                            }
                                             updateIndirectLabor(copy);
                                           }}
                                           className="w-20 font-financial font-bold text-right border border-amber-300 rounded px-1.5 py-0.5 text-xs text-amber-900 bg-amber-50/40 focus:border-amber-600 focus:outline-none"
                                         />
                                       </div>
+                                      {fohViewYear > 1 && (
+                                        <span className="text-[9px] text-amber-700 font-medium">
+                                          Base Yr 1: {c}{basePieceRate}
+                                        </span>
+                                      )}
                                       <span className="text-[10px] text-slate-500">
                                         × {wageInfo.yearVolume.toLocaleString()} units
                                       </span>
@@ -4340,31 +4449,22 @@ export default function AssumptionsEditor({
                                       </td>
                                       <td className="p-2">
                                         <select
-                                          value={b.type}
+                                          value={b.type === 'one_month_salary' ? 'fixed_monthly_per_head' : b.type}
                                           onChange={(e) => {
                                             const copy = [...laborBenefitsList];
                                             const newType = e.target.value as BenefitCalculationType;
                                             copy[idx].type = newType;
-                                            if (newType === 'one_month_salary' && !copy[idx].rateOrAmount) {
-                                              copy[idx].rateOrAmount = 1;
-                                            }
                                             updateProductionLaborBenefits(copy);
                                           }}
                                           className="w-full text-xs border border-slate-200 rounded px-1.5 py-1 bg-white focus:outline-none"
                                         >
-                                          <option value="one_month_salary">1 Month Salary (13th Month)</option>
+                                          <option value="fixed_monthly_per_head">Monthly Fixed / Head (Uniform/PPE/Subsidy)</option>
                                           <option value="percentage">% of Basic Salary</option>
-                                          <option value="fixed_monthly_per_head">Monthly Fixed / Head</option>
-                                          <option value="fixed_annual">Annual Lump Sum</option>
+                                          <option value="fixed_annual">Annual Lump Sum (Medical/Outing)</option>
                                         </select>
                                       </td>
                                       <td className="p-2 text-right">
-                                        {b.type === 'one_month_salary' ? (
-                                          <span className="inline-block text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                                            1 Mo. Salary
-                                          </span>
-                                        ) : (
-                                          <div className="flex items-center justify-end gap-1">
+                                        <div className="flex items-center justify-end gap-1">
                                             <input
                                               type="number"
                                               step={b.type === 'percentage' ? '0.01' : '10'}
@@ -4381,7 +4481,6 @@ export default function AssumptionsEditor({
                                               {b.type === 'percentage' ? '%' : b.type === 'fixed_monthly_per_head' ? '/mo' : c}
                                             </span>
                                           </div>
-                                        )}
                                       </td>
                                       <td className="p-2">
                                         <select

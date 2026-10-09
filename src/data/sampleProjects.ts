@@ -48,7 +48,7 @@ export const BLANK_PROJECT: FeasibilityProject = {
   factoryDepreciationMethod: 'percentage',
   factoryAssetIds: [],
   factorySupplies: [],
-  productionLaborBenefits: [DEFAULT_13TH_MONTH_PAY],
+  productionLaborBenefits: [],
   includeLaborBenefitsInCOGS: true,
   factoryOverheadAnnual: 0,
   factoryOverheadGrowthRate: 0,

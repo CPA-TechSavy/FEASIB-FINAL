@@ -16,6 +16,8 @@ interface PdfDownloadButtonProps {
   size?: 'xs' | 'sm' | 'md';
   variant?: 'default' | 'emerald' | 'indigo' | 'slate' | 'outline' | 'amber';
   className?: string;
+  onBeforeExport?: () => Promise<void> | void;
+  onAfterExport?: () => void;
 }
 
 export default function PdfDownloadButton({
@@ -32,6 +34,8 @@ export default function PdfDownloadButton({
   size = 'sm',
   variant = 'default',
   className = '',
+  onBeforeExport,
+  onAfterExport,
 }: PdfDownloadButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -45,6 +49,12 @@ export default function PdfDownloadButton({
     setIsSuccess(false);
 
     try {
+      if (onBeforeExport) {
+        await onBeforeExport();
+        // Give browser and React a brief moment to paint
+        await new Promise((r) => setTimeout(r, 120));
+      }
+
       const options: PdfExportOptions = {
         title,
         subtitle,
@@ -64,6 +74,9 @@ export default function PdfDownloadButton({
     } catch (err) {
       console.error('Error generating PDF:', err);
     } finally {
+      if (onAfterExport) {
+        onAfterExport();
+      }
       setIsGenerating(false);
     }
   };

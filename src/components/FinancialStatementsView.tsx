@@ -41,6 +41,7 @@ export default function FinancialStatementsView({
   onOpenCompanyModal,
 }: FinancialStatementsViewProps) {
   const [selectedView, setSelectedView] = useState<StatementViewType>('all');
+  const [isExportingAll, setIsExportingAll] = useState(false);
   const c = project.currency;
 
   const years5 = financials.slice(1); // Year 1 to 5
@@ -74,6 +75,9 @@ export default function FinancialStatementsView({
             variant="slate"
             orientation="landscape"
             format="a4"
+            fitToSinglePage={false}
+            onBeforeExport={() => setIsExportingAll(true)}
+            onAfterExport={() => setIsExportingAll(false)}
           />
 
           {/* View Switcher Tabs */}
@@ -146,7 +150,7 @@ export default function FinancialStatementsView({
         {/* ========================================================================= */}
         {/* 1. PROJECTED STATEMENT OF COMPREHENSIVE INCOME */}
         {/* ========================================================================= */}
-        {(selectedView === 'all' || selectedView === 'income') && (
+        {(selectedView === 'all' || isExportingAll || selectedView === 'income') && (
           <div id="statement-income" className="print-break-inside-avoid">
             <div className="flex items-center justify-between mb-4">
               <div className="w-24 hidden sm:block" />
@@ -526,7 +530,7 @@ export default function FinancialStatementsView({
         {/* ========================================================================= */}
         {/* 2. PROJECTED STATEMENT OF CASH FLOWS */}
         {/* ========================================================================= */}
-        {(selectedView === 'all' || selectedView === 'cashflow') && (
+        {(selectedView === 'all' || isExportingAll || selectedView === 'cashflow') && (
           <div id="statement-cashflow" className="print-break-inside-avoid print-break-before pt-6 border-t border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div className="w-24 hidden sm:block" />
@@ -857,7 +861,7 @@ export default function FinancialStatementsView({
         {/* ========================================================================= */}
         {/* 3. PROJECTED STATEMENT OF FINANCIAL POSITION (BALANCE SHEET) */}
         {/* ========================================================================= */}
-        {(selectedView === 'all' || selectedView === 'balance') && (
+        {(selectedView === 'all' || isExportingAll || selectedView === 'balance') && (
           <div id="statement-balance" className="print-break-inside-avoid print-break-before pt-6 border-t border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div className="w-24 hidden sm:block" />
@@ -1207,7 +1211,7 @@ export default function FinancialStatementsView({
         {/* ========================================================================= */}
         {/* 4. STATEMENT OF CHANGES IN EQUITY */}
         {/* ========================================================================= */}
-        {(selectedView === 'all' || selectedView === 'equity') && (
+        {(selectedView === 'all' || isExportingAll || selectedView === 'equity') && (
           <div id="statement-equity" className="print-break-inside-avoid print-break-before pt-6 border-t border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div className="w-24 hidden sm:block" />

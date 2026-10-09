@@ -5,7 +5,13 @@ import {
   ProductCostComponent,
   CostComponentCategory,
 } from '../types';
-import { formatCurrency, formatPercent, calculateDepreciation, calculateYear1FactoryOverhead } from '../utils/financialCalculations';
+import {
+  formatCurrency,
+  formatPercent,
+  calculateDepreciation,
+  calculateYear1FactoryOverhead,
+  calculateLaborItemWageForYear,
+} from '../utils/financialCalculations';
 import { SAMPLE_BOM_PRESETS } from '../data/bomPresets';
 import {
   Calculator,
@@ -190,12 +196,11 @@ export default function ProductCostingTab({
 
   // Direct Labor aggregates from project
   const totalDirectLaborAnnual = useMemo(() => {
-    return project.directLabor.reduce(
-      (sum, lab) =>
-        sum + (lab.monthlyWage || 0) * (lab.monthsPerYear || 12) * (lab.headcount || 1),
+    return (project.directLabor || []).reduce(
+      (sum, lab) => sum + calculateLaborItemWageForYear(lab, project, 1).annualWage,
       0
     );
-  }, [project.directLabor]);
+  }, [project.directLabor, project.products]);
 
   const totalDirectLaborHeadcount = useMemo(() => {
     return project.directLabor.reduce((sum, lab) => sum + (lab.headcount || 0), 0);

@@ -12,7 +12,6 @@ import {
   User as UserIcon,
   ShieldCheck,
   Lock,
-  Eye,
 } from 'lucide-react';
 import { CurrencySymbol, FeasibilityProject, YearFinancials, FeasibilityMetrics } from '../types';
 import { exportProjectJSON } from '../utils/exportHelpers';
@@ -378,14 +377,6 @@ export default function Header({
               {/* User Account / Demo Status & Sign Out */}
               {isDemoMode ? (
                 <div className="flex items-center gap-1.5 pl-1.5 lg:pl-2 border-l border-slate-700/80 shrink-0">
-                  <div
-                    className="flex items-center justify-center gap-1.5 h-8 lg:h-9 px-2 rounded-lg bg-amber-950/70 border border-amber-600/70 max-w-[130px] lg:max-w-[170px] overflow-hidden shrink-0 text-amber-200"
-                    title="Demo Guest User (Read-Only Mode)"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span className="text-[11px] font-bold truncate">Demo Mode</span>
-                  </div>
-
                   {onExitDemo && (
                     <button
                       type="button"
