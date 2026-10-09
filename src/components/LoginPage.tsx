@@ -109,7 +109,11 @@ export default function LoginPage({
           email: user.email,
           displayName:
             user.displayName ||
-            (email.includes('cpa') ? 'John Joebert Suarez, CPA (Admin)' : 'John Joebert Suarez (Owner & Admin)'),
+            (email.includes('virtudazo')
+              ? 'Gerberto Virtudazo (Owner & Admin)'
+              : email.includes('cpa')
+              ? 'John Joebert Suarez, CPA (Admin)'
+              : 'John Joebert Suarez (Owner & Admin)'),
           photoURL: user.photoURL,
         });
       } else {
@@ -293,10 +297,7 @@ export default function LoginPage({
                 <Lock className="w-6 h-6" />
               </div>
 
-              <h2 className="text-xl font-bold text-white mb-1.5">Sign In to Continue</h2>
-              <p className="text-xs text-slate-400 mb-5">
-                Please log in with your Google account. Access and installation are granted upon administrator approval.
-              </p>
+              <h2 className="text-xl font-bold text-white mb-5">Sign In to Continue</h2>
 
               {/* Instant Demo Access (Pre-existing data, read-only) */}
               {onStartDemo && (
@@ -355,6 +356,7 @@ export default function LoginPage({
                         The Google account <span className="font-mono font-semibold text-white px-1.5 py-0.5 rounded bg-rose-900/60 border border-rose-700/60 break-all">{directAccessNotice.email}</span> does not have direct access permissions. Direct access is strictly reserved for:
                       </p>
                       <ul className="text-xs text-rose-300 list-disc list-inside mt-1.5 space-y-0.5 font-medium">
+                        <li>gerbertovirtudazo2@gmail.com</li>
                         <li>suarezjohnjoebert@gmail.com</li>
                         <li>suarezjohnjoebertcpa@gmail.com</li>
                       </ul>
@@ -439,10 +441,10 @@ export default function LoginPage({
 
                 <button
                   type="button"
-                  onClick={() => handleDirectAccessSignIn('suarezjohnjoebert@gmail.com')}
+                  onClick={() => handleDirectAccessSignIn()}
                   disabled={loading || directAccessLoading}
                   className="w-full p-3 rounded-xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 hover:from-indigo-900 hover:to-indigo-900 border-2 border-indigo-500/70 hover:border-indigo-400 text-white font-bold text-xs shadow-lg shadow-indigo-950/50 transition-all flex items-center justify-between group cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                  title="Direct Entry for Authorized Google Accounts (suarezjohnjoebert@gmail.com / suarezjohnjoebertcpa@gmail.com)"
+                  title="Direct Entry for Authorized Owner & Admin Google Accounts (gerbertovirtudazo2@gmail.com / suarezjohnjoebert@gmail.com)"
                 >
                   <div className="flex items-center gap-2.5 text-left">
                     <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform shrink-0">
@@ -468,17 +470,6 @@ export default function LoginPage({
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </button>
-
-                <div className="flex items-center justify-end gap-2 mt-2 px-1">
-                  <button
-                    type="button"
-                    onClick={() => handleDirectAccessSignIn('suarezjohnjoebertcpa@gmail.com')}
-                    disabled={loading || directAccessLoading}
-                    className="text-[10px] text-indigo-400 hover:text-indigo-200 underline cursor-pointer disabled:opacity-50"
-                  >
-                    Secondary CPA Access
-                  </button>
-                </div>
               </div>
 
               {/* Alternative Google Account Email Input */}

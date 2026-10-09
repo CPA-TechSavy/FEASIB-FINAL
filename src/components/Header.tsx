@@ -27,6 +27,7 @@ interface HeaderProps {
   onOpenInstallModal?: () => void;
   isInstalled?: boolean;
   isAdmin?: boolean;
+  pendingRequestsCount?: number;
   onOpenAdminModal?: () => void;
   currentUser?: {
     displayName?: string | null;
@@ -58,6 +59,7 @@ export default function Header({
   onOpenInstallModal,
   isInstalled,
   isAdmin,
+  pendingRequestsCount = 0,
   onOpenAdminModal,
   currentUser,
   onSignOut,
@@ -360,17 +362,25 @@ export default function Header({
                 </button>
               )}
 
-              {/* Admin / Owner Control Hub Button (Visible to John Joebert Suarez) */}
+              {/* Admin / Owner Control Hub Button */}
               {!isDemoMode && isAdmin && onOpenAdminModal && (
                 <button
                   type="button"
                   onClick={onOpenAdminModal}
                   aria-label="Owner & Access Hub"
-                  title="Owner Controls, AI Studio Project Workspace & User Access Management (John Joebert Suarez)"
-                  className="h-8 w-8 lg:h-9 lg:w-auto p-0 lg:px-2.5 text-xs rounded-lg bg-indigo-900/90 hover:bg-indigo-800 border border-indigo-500/70 font-bold text-indigo-100 hover:text-white flex items-center justify-center transition cursor-pointer shadow-xs shrink-0"
+                  title="Owner Controls & 1-Click User Access Approvals"
+                  className={`h-8 w-8 lg:h-9 lg:w-auto p-0 lg:px-2.5 text-xs rounded-lg font-bold flex items-center justify-center transition cursor-pointer shadow-xs shrink-0 ${
+                    pendingRequestsCount > 0
+                      ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-300 shadow-md animate-pulse'
+                      : 'bg-indigo-900/90 hover:bg-indigo-800 border border-indigo-500/70 text-indigo-100 hover:text-white'
+                  }`}
                 >
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span className="hidden lg:inline ml-1.5">Owner Hub</span>
+                  <ShieldCheck className={`w-4 h-4 shrink-0 ${pendingRequestsCount > 0 ? 'text-slate-950' : 'text-emerald-400'}`} />
+                  <span className="hidden lg:inline ml-1.5">
+                    {pendingRequestsCount > 0
+                      ? `Approve Users (${pendingRequestsCount})`
+                      : 'Owner Hub'}
+                  </span>
                 </button>
               )}
 

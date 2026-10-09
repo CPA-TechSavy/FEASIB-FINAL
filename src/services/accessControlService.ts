@@ -10,10 +10,11 @@ import {
 import { db } from '../firebase';
 
 export const ADMIN_EMAILS = [
+  'gerbertovirtudazo2@gmail.com',
   'suarezjohnjoebert@gmail.com',
   'suarezjohnjoebertcpa@gmail.com',
 ];
-export const ADMIN_EMAIL = 'suarezjohnjoebert@gmail.com';
+export const ADMIN_EMAIL = 'gerbertovirtudazo2@gmail.com';
 export const ADMIN_CPA_EMAIL = 'suarezjohnjoebertcpa@gmail.com';
 export const DEMO_USER_EMAIL = 'demo@nobsfeasibility.com';
 
@@ -319,16 +320,74 @@ export async function fetchAllAccessRequests(): Promise<AccessRequestRecord[]> {
 }
 
 /**
- * Manually update access status by admin
+ * Realtime listener for all access requests (for owner/admin real-time approval)
+ */
+export function subscribeToAllAccessRequests(
+  callback: (requests: AccessRequestRecord[]) => void
+): () => void {
+  const colRef = collection(db, 'access_requests');
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const results: AccessRequestRecord[] = [];
+      snapshot.forEach((docSnap) => {
+        results.push(docSnap.data() as AccessRequestRecord);
+      });
+      // Sort pending first, then by requestedAt desc
+      results.sort((a, b) => {
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (b.status === 'pending' && a.status !== 'pending') return 1;
+        return new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime();
+      });
+      callback(results);
+    },
+    (err) => {
+      console.warn('Error subscribing to all access requests:', err);
+    }
+  );
+}
+
+/**
+ * Manually update access status by admin with 1 click
  */
 export async function setAccessStatus(
   email: string,
   newStatus: 'approved' | 'rejected'
 ): Promise<void> {
-  const docKey = sanitizeEmailKey(email);
+  const cleanEmail = email.toLowerCase().trim();
+  const docKey = sanitizeEmailKey(cleanEmail);
   const docRef = doc(db, 'access_requests', docKey);
-  await updateDoc(docRef, {
-    status: newStatus,
-    approvedAt: new Date().toISOString(),
-  });
+  await setDoc(
+    docRef,
+    {
+      status: newStatus,
+      approvedAt: newStatus === 'approved' ? new Date().toISOString() : null,
+    },
+    { merge: true }
+  );
+}
+
+/**
+ * Pre-approve a Google account before they even log in
+ */
+export async function preApproveGoogleAccount(
+  email: string,
+  displayName?: string
+): Promise<void> {
+  const cleanEmail = email.toLowerCase().trim();
+  const docKey = sanitizeEmailKey(cleanEmail);
+  const docRef = doc(db, 'access_requests', docKey);
+  await setDoc(
+    docRef,
+    {
+      email: cleanEmail,
+      displayName: displayName || cleanEmail.split('@')[0],
+      photoURL: '',
+      status: 'approved',
+      requestedAt: new Date().toISOString(),
+      approvedAt: new Date().toISOString(),
+      approvalToken: 'pre-approved',
+    },
+    { merge: true }
+  );
 }

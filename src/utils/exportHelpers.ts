@@ -99,13 +99,12 @@ export function exportToExcel(
         <tr class="subtotal"><td>Net Sales</td>${financials.slice(1).map(f => `<td class="num">${Math.round(f.netSales).toLocaleString()}</td>`).join('')}</tr>
         <tr><td>Less: Cost of Goods Sold</td>${financials.slice(1).map(f => `<td class="num">(${Math.round(f.totalCOGS).toLocaleString()})</td>`).join('')}</tr>
         <tr class="subtotal"><td>Gross Profit</td>${financials.slice(1).map(f => `<td class="num">${Math.round(f.grossProfit).toLocaleString()}</td>`).join('')}</tr>
-        <tr><td>Operating Expenses (SG&A + Depr.)</td>${financials.slice(1).map(f => `<td class="num">(${Math.round(f.totalOpex).toLocaleString()})</td>`).join('')}</tr>
-        <tr class="subtotal"><td>Operating Income (EBIT)</td>${financials.slice(1).map(f => `<td class="num">${Math.round(f.ebit).toLocaleString()}</td>`).join('')}</tr>
-        <tr><td>Add: Bank Interest Income</td>${financials.slice(1).map(f => `<td class="num">${Math.round(f.interestIncome || 0).toLocaleString()}</td>`).join('')}</tr>
-        <tr><td>Less: Financing Cost (Interest Expense)</td>${financials.slice(1).map(f => `<td class="num">(${Math.round(f.interestExpense).toLocaleString()})</td>`).join('')}</tr>
-        <tr class="subtotal"><td>Net Income Before Taxes (EBT)</td>${financials.slice(1).map(f => `<td class="num">${Math.round(f.ebt).toLocaleString()}</td>`).join('')}</tr>
+        <tr><td>Operating Expenses (SG&A, Depr. & Interest Expense)</td>${financials.slice(1).map(f => `<td class="num">(${Math.round(f.totalOpex).toLocaleString()})</td>`).join('')}</tr>
+        <tr class="subtotal"><td>Operating Income / Earnings Before Taxes (EBT)</td>${financials.slice(1).map(f => `<td class="num">${Math.round(f.ebt).toLocaleString()}</td>`).join('')}</tr>
         <tr><td>Less: Provision for Income Tax (${project.taxRatePercent}%)</td>${financials.slice(1).map(f => `<td class="num">(${Math.round(f.taxExpense).toLocaleString()})</td>`).join('')}</tr>
-        <tr class="grandtotal"><td>NET INCOME AFTER TAX</td>${financials.slice(1).map(f => `<td class="num">${Math.round(f.netIncome).toLocaleString()}</td>`).join('')}</tr>
+        <tr class="subtotal"><td>Net Income After Tax</td>${financials.slice(1).map(f => `<td class="num">${Math.round(f.netIncome).toLocaleString()}</td>`).join('')}</tr>
+        <tr><td>Add: Bank Interest Income (Taxed under Final Tax)</td>${financials.slice(1).map(f => `<td class="num">${Math.round(f.interestIncome || 0).toLocaleString()}</td>`).join('')}</tr>
+        <tr class="grandtotal"><td>TOTAL COMPREHENSIVE INCOME</td>${financials.slice(1).map(f => `<td class="num">${Math.round(f.comprehensiveIncome ?? (f.netIncome + (f.interestIncome || 0))).toLocaleString()}</td>`).join('')}</tr>
       </tbody>
     </table>
 

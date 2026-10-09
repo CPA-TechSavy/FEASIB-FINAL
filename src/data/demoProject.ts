@@ -210,10 +210,10 @@ export const DEMO_PROJECT: FeasibilityProject = {
       annualGrowthRate: 10,
       dlCostMode: 'volume_share',
       fohCostMode: 'volume_share',
-      rawMaterialsCostPerUnit: 41.2,
+      rawMaterialsCostPerUnit: 49.3,
       directLaborCostPerUnit: 11.4,
       factoryOverheadCostPerUnit: 16.61,
-      unitCost: 69.21,
+      unitCost: 77.31,
       costBreakdown: [
         {
           id: 'cb-2-1',

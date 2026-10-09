@@ -28,6 +28,7 @@ import {
   checkAccessStatus,
   requestWebsiteAccess,
   handleUrlApprovalAction,
+  subscribeToAllAccessRequests,
   AccessRequestRecord,
   isDemoUser,
   DEMO_USER_EMAIL,
@@ -134,6 +135,17 @@ export default function App() {
   const [inactivityNotice, setInactivityNotice] = useState(false);
 
   const isAdmin = checkIsAdmin(currentUser?.email);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
+
+  // Realtime subscription for admin to track pending access requests
+  useEffect(() => {
+    if (!isAdmin) return;
+    const unsubscribe = subscribeToAllAccessRequests((requests) => {
+      const pending = requests.filter((r) => r.status === 'pending').length;
+      setPendingRequestsCount(pending);
+    });
+    return () => unsubscribe();
+  }, [isAdmin]);
 
   // Demo Mode state: grants immediate read-only access to explore pre-existing feasibility data
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
@@ -436,6 +448,7 @@ export default function App() {
         onOpenInstallModal={() => setShowInstructions(true)}
         isInstalled={isInstalled}
         isAdmin={isAdmin}
+        pendingRequestsCount={pendingRequestsCount}
         onOpenAdminModal={() => setIsAdminModalOpen(true)}
         currentUser={currentUser}
         onSignOut={handleSignOut}
@@ -674,11 +687,12 @@ export default function App() {
         isIOS={isIOS}
       />
 
-      {/* Admin User Access Control Modal for John Joebert Suarez */}
+      {/* Admin User Access Control Modal */}
       {isAdmin && (
         <AdminAccessModal
           isOpen={isAdminModalOpen}
           onClose={() => setIsAdminModalOpen(false)}
+          currentUserEmail={currentUser?.email}
         />
       )}
     </div>

@@ -411,53 +411,10 @@ export default function FinancialStatementsView({
                       </td>
                     ))}
                   </tr>
-                  <tr className="acc-subtotal font-medium">
-                    <td className="py-1.5 pl-4 text-slate-700">Total Operating Expenses</td>
-                    {years5.map((y) => (
-                      <td key={y.year} className="py-1.5 text-right font-financial text-slate-700">
-                        {formatCurrency(-y.totalOpex, c)}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* EBIT */}
-                  <tr className="acc-subtotal font-semibold bg-slate-50/50">
-                    <td className="py-1.5 pl-1">Operating Income (EBIT)</td>
-                    {years5.map((y) => (
-                      <td key={y.year} className="py-1.5 text-right font-financial font-semibold">
-                        {formatCurrency(y.ebit, c)}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Interest Income */}
                   <tr>
-                    <td className="py-1.5 pl-4 text-emerald-700">
+                    <td className="py-1 pl-4 text-slate-600">
                       <span>
-                        Add: Other Income – Interest Received from Bank Account ({project.workingCapitalBufferDetails?.bankName || 'Depository Bank'} @ {project.workingCapitalBufferDetails?.bankInterestRatePercent ?? 0}%)
-                      </span>
-                      {onOpenBankModal && (
-                        <button
-                          onClick={onOpenBankModal}
-                          className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition cursor-pointer"
-                          title="Click to view bank savings interest calculation breakdown"
-                        >
-                          Breakdown
-                        </button>
-                      )}
-                    </td>
-                    {years5.map((y) => (
-                      <td key={y.year} className="py-1.5 text-right font-financial text-emerald-700">
-                        {formatCurrency(y.interestIncome ?? 0, c)}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Finance Cost */}
-                  <tr>
-                    <td className="py-1.5 pl-4 text-slate-600">
-                      <span>
-                        Less: Finance Costs – Interest Expense on Bank Borrowings ({project.financing.annualInterestRate}%)
+                        Interest Expense on Bank Borrowings ({project.financing.annualInterestRate}%)
                       </span>
                       {onOpenBankModal && (
                         <button
@@ -470,17 +427,25 @@ export default function FinancialStatementsView({
                       )}
                     </td>
                     {years5.map((y) => (
-                      <td key={y.year} className="py-1.5 text-right font-financial text-slate-600">
-                        {formatCurrency(-y.interestExpense, c)}
+                      <td key={y.year} className="py-1 text-right font-financial text-slate-600">
+                        {formatCurrency(y.interestExpense, c)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="acc-subtotal font-medium">
+                    <td className="py-1.5 pl-4 text-slate-700">Total Operating Expenses</td>
+                    {years5.map((y) => (
+                      <td key={y.year} className="py-1.5 text-right font-financial text-slate-700">
+                        {formatCurrency(-y.totalOpex, c)}
                       </td>
                     ))}
                   </tr>
 
-                  {/* EBT */}
-                  <tr className="acc-subtotal font-semibold">
-                    <td className="py-1.5 pl-1">Earnings Before Taxes (EBT)</td>
+                  {/* Operating Income / Earnings Before Taxes */}
+                  <tr className="acc-subtotal font-semibold bg-slate-50/50">
+                    <td className="py-1.5 pl-1">Operating Income / Earnings Before Taxes (EBT)</td>
                     {years5.map((y) => (
-                      <td key={y.year} className="py-1.5 text-right font-financial">
+                      <td key={y.year} className="py-1.5 text-right font-financial font-semibold">
                         {formatCurrency(y.ebt, c)}
                       </td>
                     ))}
@@ -498,22 +463,57 @@ export default function FinancialStatementsView({
                     ))}
                   </tr>
 
-                  {/* Net Income */}
-                  <tr className="acc-total font-bold bg-emerald-50/40 text-slate-900">
-                    <td className="py-2.5 pl-1 uppercase font-bold tracking-wide">
+                  {/* Net Income After Tax */}
+                  <tr className="acc-subtotal font-bold bg-slate-50/70 text-slate-900">
+                    <td className="py-2 pl-1 font-bold">
                       Net Income After Tax
                     </td>
                     {years5.map((y) => (
-                      <td key={y.year} className="py-2.5 text-right font-financial font-bold text-emerald-900">
+                      <td key={y.year} className="py-2 text-right font-financial font-bold text-slate-900">
                         {formatCurrency(y.netIncome, c)}
                       </td>
                     ))}
                   </tr>
                   <tr className="text-xs text-slate-500 italic">
-                    <td className="py-1 pl-4">Net Profit Margin %</td>
+                    <td className="py-0.5 pl-4">Net Profit Margin %</td>
                     {years5.map((y) => (
-                      <td key={y.year} className="py-1 text-right font-financial">
+                      <td key={y.year} className="py-0.5 text-right font-financial">
                         {formatPercent(y.netProfitMargin)}
+                      </td>
+                    ))}
+                  </tr>
+
+                  {/* Other Income: Interest Received from Bank Account (Taxed under Final Tax) */}
+                  <tr>
+                    <td className="py-1.5 pl-4 text-emerald-700">
+                      <span>
+                        Add: Other Income – Interest Received from Bank Account ({project.workingCapitalBufferDetails?.bankName || 'Depository Bank'} @ {project.workingCapitalBufferDetails?.bankInterestRatePercent ?? 0}%, Taxed under Final Tax)
+                      </span>
+                      {onOpenBankModal && (
+                        <button
+                          onClick={onOpenBankModal}
+                          className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition cursor-pointer"
+                          title="Click to view bank savings interest calculation breakdown"
+                        >
+                          Breakdown
+                        </button>
+                      )}
+                    </td>
+                    {years5.map((y) => (
+                      <td key={y.year} className="py-1.5 text-right font-financial text-emerald-700 font-medium">
+                        {formatCurrency(y.interestIncome ?? 0, c)}
+                      </td>
+                    ))}
+                  </tr>
+
+                  {/* Comprehensive Income */}
+                  <tr className="acc-total font-bold bg-emerald-50/40 text-slate-900">
+                    <td className="py-2.5 pl-1 uppercase font-bold tracking-wide">
+                      Comprehensive Income
+                    </td>
+                    {years5.map((y) => (
+                      <td key={y.year} className="py-2.5 text-right font-financial font-bold text-emerald-900">
+                        {formatCurrency(y.comprehensiveIncome ?? (y.netIncome + (y.interestIncome || 0)), c)}
                       </td>
                     ))}
                   </tr>
@@ -521,8 +521,13 @@ export default function FinancialStatementsView({
               </table>
             </div>
 
-            <div className="mt-2.5 pt-2 border-t border-slate-100 text-[11px] text-slate-500 italic px-2">
-              * Note on Cost of Goods Sold: <strong>Factory Overhead (Supplies & Utilities)</strong> reflects Indirect Labor, Utilities Production, and Supplies & Misc. The sum of <em>Production Labor Benefits (Direct & Indirect)</em>, <em>Factory Overhead (Supplies & Utilities)</em>, and <em>Depreciation - Machinery & Plant</em> equals <strong>Total Factory Overhead</strong>.
+            <div className="mt-2.5 pt-2 border-t border-slate-100 text-[11px] text-slate-500 italic px-2 space-y-1">
+              <div>
+                * Note on Cost of Goods Sold: <strong>Direct Raw Materials</strong> accurately reflects the Direct Raw Material Cost from the Costing Tab and Schedule of Direct Materials. <strong>Factory Overhead (Supplies & Utilities)</strong> reflects Indirect Labor, Utilities Production, and Supplies & Misc. The sum of <em>Production Labor Benefits</em>, <em>Factory Overhead</em>, and <em>Depreciation</em> equals <strong>Total Factory Overhead</strong>.
+              </div>
+              <div>
+                * Note on Taxes & Comprehensive Income: <strong>Interest Expense</strong> is accounted for under Operating Expenses. <strong>Interest Received</strong> from bank cash deposits is subject to Final Withholding Tax at source under Philippine tax law (NIRC), hence excluded from taxable Earnings Before Taxes (EBT) and added after Net Income After Tax to arrive at <strong>Comprehensive Income</strong>.
+              </div>
             </div>
           </div>
         )}
@@ -582,10 +587,18 @@ export default function FinancialStatementsView({
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-1 pl-4">Net Income / (Pre-Operating Loss)</td>
+                    <td className="py-1 pl-4">Net Income After Tax / (Pre-Operating Loss)</td>
                     {allYears.map((y) => (
                       <td key={y.year} className="py-1 text-right font-financial">
                         {formatCurrency(y.netIncome, c)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="py-1 pl-4 text-emerald-700">Add: Bank Interest Received (Taxed under Final Tax)</td>
+                    {allYears.map((y) => (
+                      <td key={y.year} className="py-1 text-right font-financial text-emerald-700">
+                        {formatCurrency(y.year === 0 ? 0 : y.interestIncome ?? 0, c)}
                       </td>
                     ))}
                   </tr>
@@ -1423,11 +1436,11 @@ export default function FinancialStatementsView({
                       </tr>
                       <tr>
                         <td className="py-1.5 pl-4 text-slate-800 font-medium">
-                          Add / (Deduct): Total Net Income After Tax / (Pre-Operating Outlays)
+                          Add / (Deduct): Total Comprehensive Income / (Pre-Operating Outlays)
                         </td>
                         {allYears.map((y) => (
                           <td key={y.year} className="py-1.5 text-right font-financial font-semibold">
-                            {formatCurrency(y.netIncome, c)}
+                            {formatCurrency(y.comprehensiveIncome ?? y.netIncome, c)}
                           </td>
                         ))}
                       </tr>
@@ -1436,9 +1449,10 @@ export default function FinancialStatementsView({
                           Less: Partners' Total Profit Drawings / Withdrawals
                         </td>
                         {allYears.map((y) => {
+                          const inc = y.comprehensiveIncome ?? y.netIncome;
                           const div =
-                            y.year > 0 && y.netIncome > 0
-                              ? y.netIncome * ((project.dividendPayoutPercent || 0) / 100)
+                            y.year > 0 && inc > 0
+                              ? inc * ((project.dividendPayoutPercent || 0) / 100)
                               : 0;
                           return (
                             <td key={y.year} className="py-1.5 text-right font-financial text-slate-600">
@@ -1491,27 +1505,31 @@ export default function FinancialStatementsView({
                       </tr>
                       <tr className="hover:bg-slate-50/60">
                         <td className="py-2 pl-2 text-slate-900 font-semibold">
-                          Add / (Deduct): Net Income After Tax / (Pre-Operating Outlays) [Added to Owner Capital]
+                          Add / (Deduct): Comprehensive Income / (Pre-Operating Outlays) [Added to Owner Capital]
                         </td>
-                        {allYears.map((y) => (
-                          <td
-                            key={y.year}
-                            className={`py-2 text-right font-financial font-semibold ${
-                              y.netIncome < 0 ? 'text-amber-800' : 'text-emerald-800'
-                            }`}
-                          >
-                            {formatCurrency(y.netIncome, c)}
-                          </td>
-                        ))}
+                        {allYears.map((y) => {
+                          const inc = y.comprehensiveIncome ?? y.netIncome;
+                          return (
+                            <td
+                              key={y.year}
+                              className={`py-2 text-right font-financial font-semibold ${
+                                inc < 0 ? 'text-amber-800' : 'text-emerald-800'
+                              }`}
+                            >
+                              {formatCurrency(inc, c)}
+                            </td>
+                          );
+                        })}
                       </tr>
                       <tr className="hover:bg-slate-50/60">
                         <td className="py-2 pl-2 text-slate-600">
                           Less: Proprietor's Personal Drawings
                         </td>
                         {allYears.map((y) => {
+                          const inc = y.comprehensiveIncome ?? y.netIncome;
                           const div =
-                            y.year > 0 && y.netIncome > 0
-                              ? y.netIncome * ((project.dividendPayoutPercent || 0) / 100)
+                            y.year > 0 && inc > 0
+                              ? inc * ((project.dividendPayoutPercent || 0) / 100)
                               : 0;
                           return (
                             <td key={y.year} className="py-2 text-right font-financial text-slate-600">

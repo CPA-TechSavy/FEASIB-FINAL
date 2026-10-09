@@ -4,6 +4,7 @@ import {
   formatCurrency,
   calculateYear1FactoryOverhead,
   calculateLaborItemWageForYear,
+  getProductDirectMaterialsCost,
 } from '../utils/financialCalculations';
 import {
   Calculator,
@@ -77,16 +78,7 @@ export default function CostingTab({
 
   // Helpers to retrieve product components aligned with Schedules 4 (DM BOM), 5 (DL), and 6 (FOH)
   const getProductDm = (p: ProductItem): number => {
-    if (p.costBreakdown && p.costBreakdown.length > 0) {
-      return Math.round(p.costBreakdown.reduce((sum, comp) => sum + (comp.totalCost || 0), 0) * 100) / 100;
-    }
-    if (p.rawMaterialsCostPerUnit !== undefined) {
-      return p.rawMaterialsCostPerUnit;
-    }
-    return Math.max(
-      0,
-      p.unitCost - (p.directLaborCostPerUnit || 0) - (p.factoryOverheadCostPerUnit || 0)
-    );
+    return getProductDirectMaterialsCost(p);
   };
 
   const getProductDl = (p: ProductItem): number => {
@@ -543,7 +535,7 @@ export default function CostingTab({
               <tr>
                 <th className="p-3">Product Name</th>
                 <th className="p-3 text-right">Selling Price ({c})</th>
-                <th className="p-3 text-right">Direct Materials ({c})</th>
+                <th className="p-3 text-right">Direct Raw Materials ({c})</th>
                 <th className="p-3 text-right">Direct Labor ({c})</th>
                 <th className="p-3 text-right">Factory Overhead ({c})</th>
                 <th className="p-3 text-right font-bold text-slate-900">Total Unit Cost ({c})</th>
@@ -593,7 +585,7 @@ export default function CostingTab({
                         type="button"
                         onClick={() => onNavigateToTab?.('directMaterials', p.id)}
                         className="group inline-flex items-center justify-end gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50/50 hover:bg-amber-100/70 border border-amber-200 hover:border-amber-300 transition text-right cursor-pointer"
-                        title="Direct Materials cannot be edited directly in Costing. Click to edit Bill of Materials & Packaging in Tab 4: Direct Materials."
+                        title="Direct Raw Materials cannot be edited directly in Costing. Click to edit Bill of Materials & Packaging in Tab 4: Direct Materials."
                       >
                         <span className="font-financial font-semibold text-amber-900 group-hover:text-amber-950">
                           {formatCurrency(dm, c, 2)}

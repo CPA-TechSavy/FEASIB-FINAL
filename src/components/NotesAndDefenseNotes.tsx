@@ -37,7 +37,11 @@ import {
   AlertCircle,
   Package,
 } from 'lucide-react';
-import { formatCurrency, formatPercent } from '../utils/financialCalculations';
+import {
+  formatCurrency,
+  formatPercent,
+  getProductDirectMaterialsCost,
+} from '../utils/financialCalculations';
 import PdfDownloadButton from './PdfDownloadButton';
 
 interface NotesAndDefenseNotesProps {
@@ -1589,10 +1593,7 @@ export default function NotesAndDefenseNotes({
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-financial">
                       {(project.products || []).map((prod) => {
-                        const matCost =
-                          prod.rawMaterialsCostPerUnit !== undefined
-                            ? prod.rawMaterialsCostPerUnit
-                            : (prod.costBreakdown || []).reduce((sum, cb) => sum + (cb.totalCost || 0), 0);
+                        const matCost = getProductDirectMaterialsCost(prod);
                         const laborCost = prod.directLaborCostPerUnit || 0;
                         const fohCost = prod.factoryOverheadCostPerUnit || 0;
                         const totalUnitCost = prod.unitCost || (matCost + laborCost + fohCost);
@@ -2252,7 +2253,7 @@ export default function NotesAndDefenseNotes({
                       </tr>
                       <tr>
                         <td className="py-1.5 px-3 font-sans text-slate-800">
-                          Less: Operating Expenses (SG&A Overhead + Non-Mfg Depr.)
+                          Less: Operating Expenses (SG&A Overhead, Non-Mfg Depr. & Interest Expense)
                         </td>
                         {years5.map((y) => (
                           <td key={y.year} className="py-1.5 px-2 text-right text-rose-600">
@@ -2260,32 +2261,8 @@ export default function NotesAndDefenseNotes({
                           </td>
                         ))}
                       </tr>
-                      <tr className="font-semibold text-slate-800">
-                        <td className="py-1.5 px-3 font-sans">Operating Income (EBIT)</td>
-                        {years5.map((y) => (
-                          <td key={y.year} className="py-1.5 px-2 text-right">
-                            {formatCurrency(y.ebit, c)}
-                          </td>
-                        ))}
-                      </tr>
-                      <tr>
-                        <td className="py-1.5 px-3 font-sans text-slate-700">Add: Bank Interest Income (Cash Deposits)</td>
-                        {years5.map((y) => (
-                          <td key={y.year} className="py-1.5 px-2 text-right text-emerald-600">
-                            {formatCurrency(y.interestIncome || 0, c)}
-                          </td>
-                        ))}
-                      </tr>
-                      <tr>
-                        <td className="py-1.5 px-3 font-sans text-slate-700">Less: Financing Cost (Bank Loan Interest)</td>
-                        {years5.map((y) => (
-                          <td key={y.year} className="py-1.5 px-2 text-right text-rose-600">
-                            ({formatCurrency(y.interestExpense, c)})
-                          </td>
-                        ))}
-                      </tr>
                       <tr className="font-semibold text-slate-800 bg-slate-50">
-                        <td className="py-1.5 px-3 font-sans">Income Before Tax (EBT)</td>
+                        <td className="py-1.5 px-3 font-sans">Operating Income / Earnings Before Taxes (EBT)</td>
                         {years5.map((y) => (
                           <td key={y.year} className="py-1.5 px-2 text-right">
                             {formatCurrency(y.ebt, c)}
@@ -2302,11 +2279,29 @@ export default function NotesAndDefenseNotes({
                           </td>
                         ))}
                       </tr>
+                      <tr className="font-bold text-slate-900 bg-slate-50 border-t border-slate-300">
+                        <td className="py-2 px-3 font-sans">Net Income After Tax</td>
+                        {years5.map((y) => (
+                          <td key={y.year} className="py-2 px-2 text-right text-slate-950 font-bold">
+                            {formatCurrency(y.netIncome, c)}
+                          </td>
+                        ))}
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 px-3 font-sans text-slate-700">
+                          Add: Bank Interest Income (Taxed under Final Tax)
+                        </td>
+                        {years5.map((y) => (
+                          <td key={y.year} className="py-1.5 px-2 text-right text-emerald-600">
+                            {formatCurrency(y.interestIncome || 0, c)}
+                          </td>
+                        ))}
+                      </tr>
                       <tr className="bg-emerald-50/70 font-bold text-emerald-950 border-t-2 border-emerald-300">
-                        <td className="py-2.5 px-3 font-sans uppercase tracking-wide">Net Income After Tax</td>
+                        <td className="py-2.5 px-3 font-sans uppercase tracking-wide">Total Comprehensive Income</td>
                         {years5.map((y) => (
                           <td key={y.year} className="py-2.5 px-2 text-right text-emerald-900 font-bold">
-                            {formatCurrency(y.netIncome, c)}
+                            {formatCurrency(y.comprehensiveIncome ?? (y.netIncome + (y.interestIncome || 0)), c)}
                           </td>
                         ))}
                       </tr>

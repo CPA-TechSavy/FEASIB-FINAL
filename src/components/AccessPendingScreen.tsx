@@ -16,8 +16,11 @@ import {
   ADMIN_EMAIL,
   sendAdminNotificationEmail,
   subscribeToAccessApproval,
+  setAccessStatus,
+  checkIsAdmin,
   AccessRequestRecord,
 } from '../services/accessControlService';
+import { signInWithGoogle } from '../firebase';
 
 interface AccessPendingScreenProps {
   user: {
@@ -41,6 +44,7 @@ export default function AccessPendingScreen({
   const [reminderSent, setReminderSent] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [ownerApproving, setOwnerApproving] = useState(false);
 
   useEffect(() => {
     // Realtime subscription so the screen unlocks immediately when approved!
@@ -53,6 +57,24 @@ export default function AccessPendingScreen({
 
     return () => unsubscribe();
   }, [user.email, onApproved]);
+
+  const handleOwnerQuickApprove = async () => {
+    try {
+      setOwnerApproving(true);
+      const adminAuthUser = await signInWithGoogle();
+      if (!adminAuthUser || !adminAuthUser.email) return;
+      if (checkIsAdmin(adminAuthUser.email)) {
+        await setAccessStatus(user.email, 'approved');
+        onApproved();
+      } else {
+        alert(`${adminAuthUser.email} is not registered as an authorized owner/administrator.`);
+      }
+    } catch (e: any) {
+      alert(`Approval verification error: ${e?.message || e}`);
+    } finally {
+      setOwnerApproving(false);
+    }
+  };
 
   const handleSendReminder = async () => {
     setIsSending(true);
@@ -122,9 +144,9 @@ export default function AccessPendingScreen({
               <span>Access Not Authorized</span>
             </div>
             <p>
-              Your access request was declined by the administrator. If you believe this was an error, please contact John Joebert Suarez, CPA at{' '}
+              Your access request was declined by the administrator. If you believe this was an error, please contact the administrator at{' '}
               <a href={`mailto:${ADMIN_EMAIL}`} className="underline font-semibold text-rose-100">
-                the administrator email
+                {ADMIN_EMAIL}
               </a>
               .
             </p>
@@ -148,7 +170,7 @@ export default function AccessPendingScreen({
             <div className="bg-indigo-950/40 border border-indigo-900/60 rounded-xl p-3 flex items-center gap-2.5 text-xs text-indigo-200">
               <RefreshCw className="w-4 h-4 text-indigo-400 animate-spin shrink-0" />
               <span>
-                Listening in real-time. This screen will automatically open the moment John Joebert Suarez approves your account.
+                Listening in real-time. This screen will automatically open the moment an owner or administrator clicks your Google account to grant access.
               </span>
             </div>
           </div>
@@ -156,6 +178,21 @@ export default function AccessPendingScreen({
 
         {/* Action Controls */}
         <div className="space-y-3 pt-2">
+          {/* Owner Quick In-Person Approval */}
+          <button
+            type="button"
+            onClick={handleOwnerQuickApprove}
+            disabled={ownerApproving}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white font-bold text-xs border border-indigo-500/40 transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+            title="If an authorized owner is present, click to verify owner Google account and grant access right here"
+          >
+            {ownerApproving ? (
+              <RefreshCw className="w-3.5 h-3.5 text-indigo-400 animate-spin" />
+            ) : (
+              <ShieldAlert className="w-3.5 h-3.5 text-emerald-400" />
+            )}
+            <span>Are you an Owner? Click your Google account to approve</span>
+          </button>
           {onStartDemo && (
             <button
               type="button"

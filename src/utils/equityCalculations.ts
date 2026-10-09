@@ -160,7 +160,7 @@ export function calculatePartnersEquitySchedule(
     const y = financials[yrIndex];
     const yr = y.year;
 
-    const totalNetIncome = y.netIncome;
+    const totalNetIncome = y.comprehensiveIncome ?? y.netIncome;
     const withdrawalPercent =
       project.workingCapital?.ownerWithdrawalsPercent !== undefined
         ? project.workingCapital.ownerWithdrawalsPercent
@@ -213,7 +213,7 @@ export function calculateSoleProprietorEquitySchedule(
     const yr = y.year;
     const prevEnding = yr === 0 ? 0 : movements[yrIndex - 1].endingCapital;
     const addContrib = yr === 0 ? y.paidInCapital : 0;
-    const netIncome = y.netIncome;
+    const netIncome = y.comprehensiveIncome ?? y.netIncome;
     const withdrawalPercent =
       project.workingCapital?.ownerWithdrawalsPercent !== undefined
         ? project.workingCapital.ownerWithdrawalsPercent

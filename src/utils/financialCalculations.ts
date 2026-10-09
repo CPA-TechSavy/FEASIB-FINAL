@@ -8,12 +8,36 @@ import {
   DirectLaborItem,
   IndirectLaborItem,
   NonManufacturingLaborItem,
+  ProductItem,
 } from '../types';
 import {
   compileProductionEmployeeBenefits,
   compileNonManufacturingEmployeeBenefits,
   calculateCompanyStatutoryBenefitsPayable,
 } from './philippineBenefits';
+
+/**
+ * Accurately determines the Direct Raw Materials cost per unit for a product,
+ * mirroring the exact Bill of Materials (BOM) cost breakdown in the Costing Tab.
+ */
+export function getProductDirectMaterialsCost(prod: ProductItem): number {
+  if (prod.costBreakdown && prod.costBreakdown.length > 0) {
+    return (
+      Math.round(
+        prod.costBreakdown.reduce((sum, comp) => sum + (comp.totalCost || 0), 0) * 100
+      ) / 100
+    );
+  }
+  if (prod.rawMaterialsCostPerUnit !== undefined) {
+    return prod.rawMaterialsCostPerUnit;
+  }
+  return Math.max(
+    0,
+    prod.unitCost -
+      (prod.directLaborCostPerUnit || 0) -
+      (prod.factoryOverheadCostPerUnit || 0)
+  );
+}
 
 /**
  * Calculates the annual cost of an additional/non-statutory labor benefit item.
@@ -420,6 +444,7 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
     ebt: -totalPreOperating,
     taxExpense: 0,
     netIncome: -totalPreOperating,
+    comprehensiveIncome: -totalPreOperating,
     netProfitMargin: 0,
     operatingCashFlow: -totalPreOperating,
     investingCashFlow: -totalCapex,
@@ -477,16 +502,9 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
     project.products.forEach((prod) => {
       // Compound growth rate from Year 1
       const growthFactor = Math.pow(1 + prod.annualGrowthRate / 100, yr - 1);
-      const volume = prod.year1Volume * growthFactor;
+      const volume = Math.round(prod.year1Volume * growthFactor);
       const sales = volume * prod.unitPrice;
-      const rawCost = prod.rawMaterialsCostPerUnit !== undefined
-        ? prod.rawMaterialsCostPerUnit
-        : Math.max(
-            0,
-            prod.unitCost -
-              (prod.directLaborCostPerUnit || 0) -
-              (prod.factoryOverheadCostPerUnit || 0)
-          );
+      const rawCost = getProductDirectMaterialsCost(prod);
       const dm = volume * rawCost;
 
       grossSales += sales;
@@ -750,6 +768,13 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
       itemizedOpex.push({ id: opex.id, name: opex.name, amount });
     });
 
+    const loanRow = loanSchedule[yr - 1] || {
+      interestExpense: 0,
+      principalRepayment: 0,
+      endingBalance: 0,
+    };
+    const interestExpense = loanRow.interestExpense;
+
     const totalOpex =
       opexSalaries +
       opexSss +
@@ -759,7 +784,8 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
       opexNonStatutoryBenefits +
       utilitiesAndRent +
       otherOpex +
-      opexDepreciation;
+      opexDepreciation +
+      interestExpense;
 
     const adminExpenses =
       opexSalaries +
@@ -768,9 +794,10 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
       opexPagibig +
       opex13thMonthPay +
       opexNonStatutoryBenefits +
-      otherOpex;
+      otherOpex +
+      interestExpense;
     const sellingExpenses = 0;
-    const ebit = grossProfit - totalOpex;
+    const ebit = grossProfit - (totalOpex - interestExpense);
 
     // 5. Financing, Interest Income & Tax
     const baseCashOnHand =
@@ -784,15 +811,11 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
     const prevCashInBank = Math.max(0, prevCash - prevCashOnHand);
     const interestIncome = Math.round(prevCashInBank * bankInterestRate);
 
-    const loanRow = loanSchedule[yr - 1] || {
-      interestExpense: 0,
-      principalRepayment: 0,
-      endingBalance: 0,
-    };
-    const interestExpense = loanRow.interestExpense;
-    const ebt = ebit + interestIncome - interestExpense;
+    // Interest Expense is part of Operating Expenses; Interest Received is taxed under Final Tax (excluded from EBT)
+    const ebt = grossProfit - totalOpex;
     const taxExpense = ebt > 0 ? ebt * (project.taxRatePercent / 100) : 0;
     const netIncome = ebt - taxExpense;
+    const comprehensiveIncome = netIncome + interestIncome;
     const netProfitMargin = netSales > 0 ? (netIncome / netSales) * 100 : 0;
 
     // 6. Working Capital Requirements (Balance Sheet Drivers)
@@ -822,10 +845,10 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
     const deltaIncomeTaxPayable = incomeTaxPayable - prevIncomeTaxPayable;
 
     // 7. Cash Flow Statement (Indirect Method)
-    // Operating Cash Flow = Net Income + Non-cash Depreciation - ΔAR - ΔInventory + ΔAP + ΔStatutoryBenefitsPayable + ΔIncomeTaxPayable
+    // Operating Cash Flow = Comprehensive Income + Non-cash Depreciation - ΔAR - ΔInventory + ΔAP + ΔStatutoryBenefitsPayable + ΔIncomeTaxPayable
     // Note: Accruing statutory benefits and tax payable defers cash outflow to the subsequent month/year
     const operatingCashFlow =
-      netIncome +
+      comprehensiveIncome +
       totalYearDepreciation -
       deltaAR -
       deltaInv +
@@ -842,7 +865,7 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
         ? project.workingCapital.ownerWithdrawalsPercent
         : (project.dividendPayoutPercent || 0);
     const dividendsPaid =
-      netIncome > 0 ? netIncome * (withdrawalPercent / 100) : 0;
+      comprehensiveIncome > 0 ? comprehensiveIncome * (withdrawalPercent / 100) : 0;
 
     // Financing Cash Flow = - Principal Repayment - Dividends
     const financingCashFlow = -loanRow.principalRepayment - dividendsPaid;
@@ -875,7 +898,7 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
     const totalLiabilities = totalCurrentLiabilities + longTermDebt;
 
     // Equity
-    cumulativeRetainedEarnings += netIncome - dividendsPaid;
+    cumulativeRetainedEarnings += comprehensiveIncome - dividendsPaid;
     const paidInCapital = year0PaidInCapital;
     const retainedEarnings = cumulativeRetainedEarnings;
     const totalEquity = paidInCapital + retainedEarnings;
@@ -970,6 +993,7 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
       ebt,
       taxExpense,
       netIncome,
+      comprehensiveIncome,
       netProfitMargin,
       operatingCashFlow,
       investingCashFlow,

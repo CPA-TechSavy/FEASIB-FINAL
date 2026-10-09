@@ -320,6 +320,7 @@ export interface YearFinancials {
   taxExpense: number;
   netIncome: number;
   netProfitMargin: number;
+  comprehensiveIncome: number; // Net Income After Tax + Bank Interest Received (taxed under final tax)
 
   // Cash Flow
   operatingCashFlow: number;
