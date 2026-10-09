@@ -25,13 +25,19 @@ interface CostingTabProps {
   project: FeasibilityProject;
   onUpdateProject: (p: FeasibilityProject) => void;
   onNavigateToTab?: (tab: any, productId?: string) => void;
+  isDemoMode?: boolean;
 }
 
 export default function CostingTab({
   project,
-  onUpdateProject,
+  onUpdateProject: originalUpdateProject,
   onNavigateToTab,
+  isDemoMode = false,
 }: CostingTabProps) {
+  const onUpdateProject = (p: FeasibilityProject) => {
+    if (isDemoMode) return;
+    originalUpdateProject(p);
+  };
   const c = project.currency;
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
@@ -271,7 +277,7 @@ export default function CostingTab({
   const overallYr1MarginPct = yr1GrossSales > 0 ? (overallYr1Margin / yr1GrossSales) * 100 : 0;
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isDemoMode ? 'demo-readonly-inputs' : ''}`}>
       {/* ---------------------------------------------------- */}
       {/* HEADER & CONTEXTUAL INTRO                            */}
       {/* ---------------------------------------------------- */}

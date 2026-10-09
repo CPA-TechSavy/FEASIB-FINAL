@@ -33,6 +33,7 @@ interface ProductCostingTabProps {
   onUpdateProject: (p: FeasibilityProject) => void;
   onNavigateToTab?: (tab: any, productId?: string) => void;
   initialProductId?: string;
+  isDemoMode?: boolean;
 }
 
 const COMPONENT_CATEGORIES: CostComponentCategory[] = [
@@ -43,10 +44,15 @@ const COMPONENT_CATEGORIES: CostComponentCategory[] = [
 
 export default function ProductCostingTab({
   project,
-  onUpdateProject,
+  onUpdateProject: originalUpdateProject,
   onNavigateToTab,
   initialProductId,
+  isDemoMode = false,
 }: ProductCostingTabProps) {
+  const onUpdateProject = (p: FeasibilityProject) => {
+    if (isDemoMode) return;
+    originalUpdateProject(p);
+  };
   const c = project.currency;
 
   // Selected product ID for detailed costing
@@ -696,7 +702,7 @@ export default function ProductCostingTab({
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isDemoMode ? 'demo-readonly-inputs' : ''}`}>
       {/* ---------------------------------------------------- */}
       {/* HEADER & CONTEXTUAL INTRO                            */}
       {/* ---------------------------------------------------- */}

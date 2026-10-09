@@ -45,14 +45,20 @@ interface NotesAndDefenseNotesProps {
   onUpdateProject: (p: FeasibilityProject) => void;
   metrics: FeasibilityMetrics;
   financials?: YearFinancials[];
+  isDemoMode?: boolean;
 }
 
 export default function NotesAndDefenseNotes({
   project,
-  onUpdateProject,
+  onUpdateProject: originalUpdateProject,
   metrics,
   financials = [],
+  isDemoMode = false,
 }: NotesAndDefenseNotesProps) {
+  const onUpdateProject = (p: FeasibilityProject) => {
+    if (isDemoMode) return;
+    originalUpdateProject(p);
+  };
   const [activeSubTab, setActiveSubTab] = useState<'notes' | 'defense'>('notes');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState(project.academicNotes || '');
@@ -1271,10 +1277,14 @@ export default function NotesAndDefenseNotes({
                 </p>
 
                 <p>
-                  <strong>3.12 Provision for Income Taxes:</strong> Current corporate income tax is provided at the statutory
+                  <strong>3.12 Provision for Income Taxes &amp; Income Tax Payable:</strong> Current corporate income tax is provided at the statutory
                   rate of <span className="font-semibold text-slate-900">{project.taxRatePercent}%</span> on taxable operating
                   profits, after deducting allowable manufacturing, administrative, and financing expense deductions in
-                  compliance with the National Internal Revenue Code (NIRC) and the CREATE Act.
+                  compliance with the National Internal Revenue Code (NIRC) and the CREATE Act. In accordance with statutory tax filing and payment schedules, the computed corporate income tax for each taxable year is accrued on the balance sheet under <span className="font-semibold text-slate-900">Current Liabilities</span> as <span className="font-semibold text-slate-900">Income Tax Payable</span>, and settled in cash during the subsequent taxable year (April 15 annual income tax filing).
+                </p>
+
+                <p>
+                  <strong>3.13 Statutory Benefits Payable:</strong> Statutory social insurance contributions (Social Security System [SSS] under RA 11199, Philippine Health Insurance Corp. [PhilHealth] under RA 11223, and Home Development Mutual Fund [Pag-IBIG/HDMF] under RA 9679) incurred for the month of December represent the combined one-month equivalent of both employee withholdings and employer counterpart contributions. Pursuant to statutory remittance regulations, December contributions are remitted to the respective agencies on or before the 10th to 15th of January in the subsequent year. Consequently, December statutory contributions are recognized on the balance sheet under <span className="font-semibold text-slate-900">Current Liabilities</span> as <span className="font-semibold text-slate-900">Statutory Benefits Payable</span> and settled in cash in the following taxable year.
                 </p>
               </div>
             </div>

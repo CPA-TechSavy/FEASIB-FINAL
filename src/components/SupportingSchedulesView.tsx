@@ -19,6 +19,7 @@ import {
   CreditCard,
   Building,
   ArrowUpDown,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface SupportingSchedulesViewProps {
@@ -984,6 +985,315 @@ export default function SupportingSchedulesView({
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
               <strong>Financial Statements Reconciliation:</strong> Current portion reconciles to Current Liabilities, Long-term portion reconciles to Non-Current Liabilities, Interest paid reconciles to Income Statement (Finance Costs), and Principal paid reconciles to Financing Cash Flows.
+            </span>
+          </div>
+          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 shrink-0">
+            Reconciled: ₱0.00 Variance
+          </span>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* SCHEDULE 6: INCOME TAX & INCOME TAX PAYABLE SCHEDULE */}
+      {/* ========================================================================= */}
+      <section id="note-schedule-6-tax" className="print-break-inside-avoid space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <Landmark className="w-4 h-4 text-indigo-600" />
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                Schedule 6: Provision for Income Tax &amp; Income Tax Payable Schedule
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Computation of corporate income tax expense at {project.taxRatePercent}% and reconciliation of Income Tax Payable recognized under Current Liabilities (paid in the subsequent taxable year).
+            </p>
+          </div>
+
+          <PdfDownloadButton
+            targetId="note-schedule-6-tax"
+            title="Schedule 6: Provision for Income Tax & Income Tax Payable Schedule"
+            subtitle={`Statutory Tax Rate: ${project.taxRatePercent}% • Settlement in Subsequent Taxable Year`}
+            projectTitle={project.title}
+            buttonText="Download PDF"
+            size="xs"
+            variant="indigo"
+            orientation="landscape"
+            format="a4"
+            fitToSinglePage={true}
+          />
+        </div>
+
+        {/* Schedule Table */}
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                <th className="py-2 px-3 text-left w-1/3">Particulars / Tax Flow</th>
+                <th className="py-2 px-3 text-right font-financial">Yr 0 (Pre-Op)</th>
+                <th className="py-2 px-3 text-right font-financial">Year 1</th>
+                <th className="py-2 px-3 text-right font-financial">Year 2</th>
+                <th className="py-2 px-3 text-right font-financial">Year 3</th>
+                <th className="py-2 px-3 text-right font-financial">Year 4</th>
+                <th className="py-2 px-3 text-right font-financial">Year 5</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-800">
+              <tr>
+                <td className="py-2 px-3 font-medium">Earnings Before Tax (EBT / Taxable Profit)</td>
+                {allYears.map((y) => (
+                  <td key={y.year} className="py-2 px-3 text-right font-financial">
+                    {formatCurrency(y.ebt, c)}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 pl-5 text-slate-600">
+                  Applicable Corporate Tax Rate
+                </td>
+                {allYears.map((y) => (
+                  <td key={y.year} className="py-2 px-3 text-right font-financial text-slate-600">
+                    {y.year === 0 ? '—' : `${project.taxRatePercent}%`}
+                  </td>
+                ))}
+              </tr>
+              <tr className="acc-subtotal font-semibold bg-slate-50/50">
+                <td className="py-2 px-3 font-semibold text-slate-900">
+                  Provision for Income Tax (per Income Statement)
+                </td>
+                {allYears.map((y) => (
+                  <td key={y.year} className="py-2 px-3 text-right font-financial font-bold text-slate-900">
+                    {formatCurrency(y.taxExpense, c)}
+                  </td>
+                ))}
+              </tr>
+
+              {/* Movement in Income Tax Payable */}
+              <tr className="bg-slate-100/70 font-semibold text-slate-700">
+                <td colSpan={7} className="py-1 px-3 text-slate-700 text-[11px] uppercase tracking-wider">
+                  Movement in Income Tax Payable (Accrual &amp; Cash Settlement)
+                </td>
+              </tr>
+              <tr>
+                <td className="py-2 px-3 pl-5 text-slate-600">
+                  Beginning Income Tax Payable
+                </td>
+                {allYears.map((y, idx) => {
+                  const beg = idx === 0 ? 0 : allYears[idx - 1]?.incomeTaxPayable || 0;
+                  return (
+                    <td key={y.year} className="py-2 px-3 text-right font-financial text-slate-600">
+                      {formatCurrency(beg, c)}
+                    </td>
+                  );
+                })}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 pl-5 text-slate-600">
+                  Add: Income Tax Computed for Current Year
+                </td>
+                {allYears.map((y) => (
+                  <td key={y.year} className="py-2 px-3 text-right font-financial text-slate-600">
+                    {formatCurrency(y.taxExpense, c)}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 pl-5 text-rose-700">
+                  Less: Income Tax Paid in Cash (Settlement of Prior Year Tax)
+                </td>
+                {allYears.map((y, idx) => {
+                  const paid = idx === 0 ? 0 : allYears[idx - 1]?.incomeTaxPayable || 0;
+                  return (
+                    <td key={y.year} className="py-2 px-3 text-right font-financial text-rose-700">
+                      {formatCurrency(-paid, c)}
+                    </td>
+                  );
+                })}
+              </tr>
+
+              {/* Ending Income Tax Payable */}
+              <tr className="acc-total font-bold bg-indigo-50/60 text-indigo-950 border-t-2 border-indigo-200">
+                <td className="py-2.5 px-3 font-bold uppercase tracking-wide">
+                  Ending Income Tax Payable (Balance Sheet: Current Liabilities)
+                </td>
+                {allYears.map((y) => (
+                  <td key={y.year} className="py-2.5 px-3 text-right font-financial font-bold text-indigo-950">
+                    {formatCurrency(y.incomeTaxPayable || 0, c)}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              <strong>Tax Timing Rule:</strong> Income tax computed for each taxable year is recognized as an Income Tax Expense in that year and accrued under Current Liabilities as <strong>Income Tax Payable</strong>, which is settled in cash during the subsequent taxable year (April 15 / Q2).
+            </span>
+          </div>
+          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 shrink-0">
+            Reconciled: ₱0.00 Variance
+          </span>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* SCHEDULE 7: STATUTORY BENEFITS PAYABLE SCHEDULE (MONTH OF DECEMBER) */}
+      {/* ========================================================================= */}
+      <section id="note-schedule-7-statutory-benefits" className="print-break-inside-avoid space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-indigo-600" />
+              <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                Schedule 7: Statutory Benefits Payable Schedule (Month of December)
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Breakdown of the 1-month equivalent combined (Employee + Employer share) cost of SSS, Pag-IBIG, and PhilHealth incurred in December and remitted to agencies in January of the following taxable year.
+            </p>
+          </div>
+
+          <PdfDownloadButton
+            targetId="note-schedule-7-statutory-benefits"
+            title="Schedule 7: Statutory Benefits Payable Schedule (Month of December)"
+            subtitle="1-Month Combined SSS, Pag-IBIG & PhilHealth (ER + EE Share) • Remitted in Following Year"
+            projectTitle={project.title}
+            buttonText="Download PDF"
+            size="xs"
+            variant="indigo"
+            orientation="landscape"
+            format="a4"
+            fitToSinglePage={true}
+          />
+        </div>
+
+        {/* Schedule Table */}
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                <th className="py-2 px-3 text-left w-1/3">Agency Breakdown / Timing Movement</th>
+                <th className="py-2 px-3 text-right font-financial">Yr 0 (Pre-Op)</th>
+                <th className="py-2 px-3 text-right font-financial">Year 1</th>
+                <th className="py-2 px-3 text-right font-financial">Year 2</th>
+                <th className="py-2 px-3 text-right font-financial">Year 3</th>
+                <th className="py-2 px-3 text-right font-financial">Year 4</th>
+                <th className="py-2 px-3 text-right font-financial">Year 5</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-800">
+              <tr className="bg-slate-50/70 font-semibold text-slate-700">
+                <td colSpan={7} className="py-1 px-3 text-slate-700 text-[11px] uppercase tracking-wider">
+                  Part A: December 1-Month Combined Statutory Cost by Agency (Employer + Employee Share)
+                </td>
+              </tr>
+              <tr>
+                <td className="py-2 px-3 pl-5 text-slate-700">
+                  Social Security System (SSS) — Combined ER &amp; EE
+                </td>
+                {allYears.map((y) => (
+                  <td key={y.year} className="py-2 px-3 text-right font-financial text-slate-700">
+                    {formatCurrency(y.sssPayable || 0, c)}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 pl-5 text-slate-700">
+                  Philippine Health Insurance Corp. (PhilHealth) — Combined ER &amp; EE
+                </td>
+                {allYears.map((y) => (
+                  <td key={y.year} className="py-2 px-3 text-right font-financial text-slate-700">
+                    {formatCurrency(y.philhealthPayable || 0, c)}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 pl-5 text-slate-700">
+                  Home Development Mutual Fund (Pag-IBIG / HDMF) — Combined ER &amp; EE
+                </td>
+                {allYears.map((y) => (
+                  <td key={y.year} className="py-2 px-3 text-right font-financial text-slate-700">
+                    {formatCurrency(y.pagibigPayable || 0, c)}
+                  </td>
+                ))}
+              </tr>
+              <tr className="acc-subtotal font-semibold bg-slate-50/50">
+                <td className="py-2 px-3 font-semibold text-slate-900">
+                  Total December Combined Statutory Incurred (1 Month)
+                </td>
+                {allYears.map((y) => (
+                  <td key={y.year} className="py-2 px-3 text-right font-financial font-bold text-slate-900">
+                    {formatCurrency(y.statutoryBenefitsPayable || 0, c)}
+                  </td>
+                ))}
+              </tr>
+
+              {/* Movement & Settlement */}
+              <tr className="bg-slate-100/70 font-semibold text-slate-700">
+                <td colSpan={7} className="py-1 px-3 text-slate-700 text-[11px] uppercase tracking-wider">
+                  Part B: Movement &amp; Subsequent Cash Settlement
+                </td>
+              </tr>
+              <tr>
+                <td className="py-2 px-3 pl-5 text-slate-600">
+                  Beginning Statutory Benefits Payable
+                </td>
+                {allYears.map((y, idx) => {
+                  const beg = idx === 0 ? 0 : allYears[idx - 1]?.statutoryBenefitsPayable || 0;
+                  return (
+                    <td key={y.year} className="py-2 px-3 text-right font-financial text-slate-600">
+                      {formatCurrency(beg, c)}
+                    </td>
+                  );
+                })}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 pl-5 text-slate-600">
+                  Add: December Statutory Incurred (Employer &amp; Employee Portion)
+                </td>
+                {allYears.map((y) => (
+                  <td key={y.year} className="py-2 px-3 text-right font-financial text-slate-600">
+                    {formatCurrency(y.statutoryBenefitsPayable || 0, c)}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 pl-5 text-rose-700">
+                  Less: Remittance Paid in Cash (Settled in January of Following Year)
+                </td>
+                {allYears.map((y, idx) => {
+                  const paid = idx === 0 ? 0 : allYears[idx - 1]?.statutoryBenefitsPayable || 0;
+                  return (
+                    <td key={y.year} className="py-2 px-3 text-right font-financial text-rose-700">
+                      {formatCurrency(-paid, c)}
+                    </td>
+                  );
+                })}
+              </tr>
+
+              {/* Ending Statutory Benefits Payable */}
+              <tr className="acc-total font-bold bg-indigo-50/60 text-indigo-950 border-t-2 border-indigo-200">
+                <td className="py-2.5 px-3 font-bold uppercase tracking-wide">
+                  Ending Statutory Benefits Payable (Balance Sheet: Current Liabilities)
+                </td>
+                {allYears.map((y) => (
+                  <td key={y.year} className="py-2.5 px-3 text-right font-financial font-bold text-indigo-950">
+                    {formatCurrency(y.statutoryBenefitsPayable || 0, c)}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              <strong>Statutory Remittance Rule:</strong> Under Philippine regulatory guidelines (RA 11199, RA 11223, and RA 9679), contributions for the month of December are due and remitted to SSS, PhilHealth, and Pag-IBIG on or before January 10 to 15 of the following year. Hence, the combined employer and employee portions are accrued under Current Liabilities as <strong>Statutory Benefits Payable</strong> on December 31, and settled in cash during the subsequent taxable year.
             </span>
           </div>
           <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 shrink-0">

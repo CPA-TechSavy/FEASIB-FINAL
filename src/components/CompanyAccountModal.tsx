@@ -14,6 +14,7 @@ import {
   Briefcase,
   AlertCircle,
   Coins,
+  Lock,
 } from 'lucide-react';
 import {
   FeasibilityProject,
@@ -28,6 +29,7 @@ interface CompanyAccountModalProps {
   onClose: () => void;
   project: FeasibilityProject;
   onUpdateProject: (p: FeasibilityProject) => void;
+  isDemoMode?: boolean;
 }
 
 const NATURE_PRESETS = [
@@ -39,6 +41,7 @@ export default function CompanyAccountModal({
   onClose,
   project,
   onUpdateProject,
+  isDemoMode = false,
 }: CompanyAccountModalProps) {
   const c = project.currency;
 
@@ -212,6 +215,11 @@ export default function CompanyAccountModal({
       equityContribution = totalPartnersCapital;
     }
 
+    if (isDemoMode) {
+      onClose();
+      return;
+    }
+
     // Update project
     const updatedProject: FeasibilityProject = {
       ...project,
@@ -317,7 +325,13 @@ export default function CompanyAccountModal({
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 sm:p-6 max-h-[70vh] overflow-y-auto space-y-6">
+        <div className={`p-5 sm:p-6 max-h-[70vh] overflow-y-auto space-y-6 ${isDemoMode ? 'demo-readonly-inputs' : ''}`}>
+          {isDemoMode && (
+            <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-center gap-2">
+              <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+              <span><strong>Demo Mode (Read-Only):</strong> Pre-existing company details and equity structure cannot be edited.</span>
+            </div>
+          )}
           {/* ========================================================= */}
           {/* STEP 1: ENTITY BASIC PROFILE */}
           {/* ========================================================= */}
@@ -702,14 +716,24 @@ export default function CompanyAccountModal({
                 <span>Back to Entity Info</span>
               </button>
 
-              <button
-                type="button"
-                onClick={handleSaveAndProceedToMainScreen}
-                className="px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center gap-2 transition shadow-md cursor-pointer"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Save & Proceed to Main Screen</span>
-              </button>
+              {isDemoMode ? (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-2.5 text-xs font-bold text-slate-800 bg-slate-200 hover:bg-slate-300 rounded-xl transition cursor-pointer"
+                >
+                  Close (Demo Mode)
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSaveAndProceedToMainScreen}
+                  className="px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center gap-2 transition shadow-md cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Save & Proceed to Main Screen</span>
+                </button>
+              )}
             </>
           )}
         </div>

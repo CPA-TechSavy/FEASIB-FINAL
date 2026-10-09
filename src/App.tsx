@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, ComponentType } from 'react';
 import { FeasibilityProject } from './types';
 import { BLANK_PROJECT, SAMPLE_PROJECTS } from './data/sampleProjects';
+import { DEMO_PROJECT } from './data/demoProject';
 import {
   calculate5YearFinancials,
   calculateFeasibilityMetrics,
@@ -20,7 +21,7 @@ import InstallAppModal from './components/InstallAppModal';
 import AccessPendingScreen from './components/AccessPendingScreen';
 import AdminAccessModal from './components/AdminAccessModal';
 import { usePwaInstall } from './hooks/usePwaInstall';
-import { useInactivityTimeout } from './hooks/useInactivityTimeout';
+import { useInactivityTimeout, resetInactivityTimer } from './hooks/useInactivityTimeout';
 import { auth, logOut, onAuthStateChanged } from './firebase';
 import {
   checkIsAdmin,
@@ -28,6 +29,8 @@ import {
   requestWebsiteAccess,
   handleUrlApprovalAction,
   AccessRequestRecord,
+  isDemoUser,
+  DEMO_USER_EMAIL,
 } from './services/accessControlService';
 import {
   FileText,
@@ -39,6 +42,9 @@ import {
   CheckCircle2,
   Landmark,
   ChevronDown,
+  Lock,
+  LogOut,
+  Eye,
 } from 'lucide-react';
 
 const STORAGE_KEY = 'undergrad_feasibility_cleanslate_v1';
@@ -100,6 +106,13 @@ export default function App() {
     photoURL?: string | null;
   } | null>(() => {
     try {
+      if (sessionStorage.getItem('nobs_demo_mode') === 'true') {
+        return {
+          displayName: 'Demo Guest User',
+          email: DEMO_USER_EMAIL,
+          photoURL: null,
+        };
+      }
       const cached = localStorage.getItem('nobs_auth_user');
       return cached ? JSON.parse(cached) : null;
     } catch {
@@ -109,13 +122,73 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
 
   // Access status state
-  const [accessStatus, setAccessStatus] = useState<'loading' | 'approved' | 'pending' | 'rejected'>('loading');
+  const [accessStatus, setAccessStatus] = useState<'loading' | 'approved' | 'pending' | 'rejected'>(() => {
+    try {
+      if (sessionStorage.getItem('nobs_demo_mode') === 'true') {
+        return 'approved';
+      }
+    } catch {
+      // ignore
+    }
+    return 'loading';
+  });
   const [requestRecord, setRequestRecord] = useState<AccessRequestRecord | undefined>(undefined);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [urlApprovalNotice, setUrlApprovalNotice] = useState<string | null>(null);
   const [inactivityNotice, setInactivityNotice] = useState(false);
 
   const isAdmin = checkIsAdmin(currentUser?.email);
+
+  // Demo Mode state: grants immediate read-only access to explore pre-existing feasibility data
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('nobs_demo_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const activeProject = useMemo(() => {
+    return isDemoMode ? DEMO_PROJECT : project;
+  }, [isDemoMode, project]);
+
+  const handleUpdateProject = useCallback(
+    (updated: FeasibilityProject) => {
+      if (isDemoMode) {
+        // In Demo Mode: amounts and parameters cannot be edited
+        return;
+      }
+      setProject(updated);
+    },
+    [isDemoMode]
+  );
+
+  const handleStartDemo = useCallback(() => {
+    setIsDemoMode(true);
+    try {
+      sessionStorage.setItem('nobs_demo_mode', 'true');
+    } catch {
+      // ignore
+    }
+    setCurrentUser({
+      displayName: 'Demo Guest User',
+      email: DEMO_USER_EMAIL,
+      photoURL: null,
+    });
+    setAccessStatus('approved');
+  }, []);
+
+  const handleExitDemo = useCallback(() => {
+    setIsDemoMode(false);
+    try {
+      sessionStorage.removeItem('nobs_demo_mode');
+      localStorage.removeItem('nobs_auth_user');
+    } catch {
+      // ignore
+    }
+    setCurrentUser(null);
+    setAccessStatus('loading');
+  }, []);
 
   // Handle one-click URL approval action from John Joebert Suarez's Gmail
   useEffect(() => {
@@ -137,6 +210,11 @@ export default function App() {
   // Firebase Auth state listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      // If user opted to use Demo Guest Profile, do not interrupt the demo session
+      if (sessionStorage.getItem('nobs_demo_mode') === 'true') {
+        setAuthLoading(false);
+        return;
+      }
       if (firebaseUser) {
         const userObj = {
           displayName: firebaseUser.displayName || 'Google User',
@@ -163,6 +241,12 @@ export default function App() {
 
   // Verify access authorization for logged-in user
   useEffect(() => {
+    // When users opt to use Demo Guest Profile, you don't need the approval of the owner
+    if (isDemoMode || isDemoUser(currentUser?.email) || currentUser?.email === DEMO_USER_EMAIL) {
+      setAccessStatus('approved');
+      return;
+    }
+
     if (!currentUser || !currentUser.email) {
       setAccessStatus('loading');
       return;
@@ -205,9 +289,13 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-  }, [currentUser]);
+  }, [currentUser, isDemoMode]);
 
   const handleSignOut = useCallback(async () => {
+    if (isDemoMode) {
+      handleExitDemo();
+      return;
+    }
     try {
       await logOut();
     } catch (e) {
@@ -220,7 +308,7 @@ export default function App() {
     } catch {
       // ignore
     }
-  }, []);
+  }, [isDemoMode, handleExitDemo]);
 
   // 3-hour inactivity auto-logout:
   // Automatically logs out user after 3 hours without activity and shows prompt to re-enter
@@ -230,7 +318,7 @@ export default function App() {
   }, [handleSignOut]);
 
   useInactivityTimeout({
-    enabled: !!currentUser && accessStatus === 'approved',
+    enabled: !isDemoMode && !!currentUser && accessStatus === 'approved',
     timeoutMs: 3 * 60 * 60 * 1000,
     onTimeout: handleInactivityLogout,
   });
@@ -241,6 +329,7 @@ export default function App() {
     photoURL?: string | null;
   }) => {
     setInactivityNotice(false);
+    resetInactivityTimer();
     setCurrentUser(user);
     try {
       localStorage.setItem('nobs_auth_user', JSON.stringify(user));
@@ -251,24 +340,25 @@ export default function App() {
 
   // Auto-save to localStorage
   useEffect(() => {
+    if (isDemoMode) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
     } catch (e) {
       console.error('Failed to save to localStorage', e);
     }
-  }, [project]);
+  }, [project, isDemoMode]);
 
   // Reactive financial calculations
   const financials = useMemo(() => {
-    return calculate5YearFinancials(project);
-  }, [project]);
+    return calculate5YearFinancials(activeProject);
+  }, [activeProject]);
 
   const metrics = useMemo(() => {
-    return calculateFeasibilityMetrics(project, financials);
-  }, [project, financials]);
+    return calculateFeasibilityMetrics(activeProject, financials);
+  }, [activeProject, financials]);
 
   // If loading auth state initially
-  if (authLoading && !currentUser) {
+  if (authLoading && !currentUser && !isDemoMode) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4">
         <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center mb-4">
@@ -281,10 +371,11 @@ export default function App() {
   }
 
   // 1. If user is not authenticated: Gate with Google Login Screen
-  if (!currentUser) {
+  if (!currentUser && !isDemoMode) {
     return (
       <LoginPage
         onSuccessLogin={handleLoginSuccess}
+        onStartDemo={handleStartDemo}
         inactivityNotice={inactivityNotice}
       />
     );
@@ -302,6 +393,7 @@ export default function App() {
         requestRecord={requestRecord}
         onApproved={() => setAccessStatus('approved')}
         onSignOut={handleSignOut}
+        onStartDemo={handleStartDemo}
       />
     );
   }
@@ -321,6 +413,33 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100/70 text-slate-900 pb-20 md:pb-0">
+      {/* Sticky Demo Mode Top Banner */}
+      {isDemoMode && (
+        <div className="no-print bg-gradient-to-r from-amber-600 via-amber-700 to-indigo-900 text-white px-3 sm:px-6 py-2.5 text-xs font-semibold flex flex-col sm:flex-row items-center justify-between gap-2 shadow-lg sticky top-0 z-50">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-black/25 flex items-center justify-center shrink-0">
+              <Lock className="w-3.5 h-3.5 text-amber-200" />
+            </div>
+            <div className="min-w-0 text-left">
+              <span className="font-extrabold uppercase tracking-wide text-amber-200 mr-2">
+                Demo Mode (Read-Only):
+              </span>
+              <span className="text-amber-50">
+                You are exploring pre-existing artisan cold brew beverage manufacturing data. All amounts and inputs are locked for demonstration only.
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleExitDemo}
+            className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs shadow-xs transition cursor-pointer flex items-center gap-1.5 shrink-0"
+          >
+            <LogOut className="w-3.5 h-3.5 text-slate-700" />
+            <span>Exit Demo &amp; Sign In</span>
+          </button>
+        </div>
+      )}
+
       {/* URL Approval Notification Banner */}
       {urlApprovalNotice && (
         <div className="bg-emerald-900 text-emerald-100 px-4 py-2.5 text-xs font-semibold flex items-center justify-between shadow-md">
@@ -339,8 +458,8 @@ export default function App() {
 
       {/* Navigation Header */}
       <Header
-        project={project}
-        onUpdateProject={setProject}
+        project={activeProject}
+        onUpdateProject={handleUpdateProject}
         financials={financials}
         metrics={metrics}
         onOpenBankModal={() => setIsBankModalOpen(true)}
@@ -351,18 +470,21 @@ export default function App() {
         onOpenAdminModal={() => setIsAdminModalOpen(true)}
         currentUser={currentUser}
         onSignOut={handleSignOut}
+        isDemoMode={isDemoMode}
+        onExitDemo={handleExitDemo}
       />
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* Project Header Info & Assumptions Quick Bar */}
         <ProjectInfoCard
-          project={project}
-          onUpdateProject={setProject}
+          project={activeProject}
+          onUpdateProject={handleUpdateProject}
           metrics={metrics}
           financials={financials}
           onOpenBankModal={() => setIsBankModalOpen(true)}
           onOpenCompanyModal={() => setIsCompanyModalOpen(true)}
+          isDemoMode={isDemoMode}
         />
 
         {/* Mobile View Switcher Dropdown (< md screens) */}
@@ -432,16 +554,16 @@ export default function App() {
 
         {/* Print Only Thesis Document Header */}
         <div className="print-only hidden mb-8 text-center pb-4 border-b border-black">
-          <h1 className="text-xl font-bold font-serif-title uppercase">{project.title}</h1>
-          <p className="text-xs font-semibold">{project.academicProgram} - {project.institution}</p>
-          <p className="text-xs italic">{project.proponents} ({project.academicYear})</p>
+          <h1 className="text-xl font-bold font-serif-title uppercase">{activeProject.title}</h1>
+          <p className="text-xs font-semibold">{activeProject.academicProgram} - {activeProject.institution}</p>
+          <p className="text-xs italic">{activeProject.proponents} ({activeProject.academicYear})</p>
           <p className="text-[10px] text-slate-600 mt-1">CHAPTER V: FINANCIAL FEASIBILITY & PROJECTED FINANCIAL STATEMENTS</p>
         </div>
 
         {/* Primary Views */}
         {activeMainView === 'statements' && (
           <FinancialStatementsView
-            project={project}
+            project={activeProject}
             financials={financials}
             onOpenBankModal={() => setIsBankModalOpen(true)}
             onOpenCompanyModal={() => setIsCompanyModalOpen(true)}
@@ -450,7 +572,7 @@ export default function App() {
 
         {activeMainView === 'evaluation' && (
           <FeasibilityEvaluationView
-            project={project}
+            project={activeProject}
             financials={financials}
             metrics={metrics}
           />
@@ -458,15 +580,16 @@ export default function App() {
 
         {activeMainView === 'assumptions' && (
           <AssumptionsEditor
-            project={project}
-            onUpdateProject={setProject}
+            project={activeProject}
+            onUpdateProject={handleUpdateProject}
             onOpenBankModal={() => setIsBankModalOpen(true)}
+            isDemoMode={isDemoMode}
           />
         )}
 
         {activeMainView === 'schedules' && (
           <SupportingSchedulesView
-            project={project}
+            project={activeProject}
             financials={financials}
             onOpenBankModal={() => setIsBankModalOpen(true)}
           />
@@ -474,26 +597,28 @@ export default function App() {
 
         {activeMainView === 'notes' && (
           <NotesAndDefenseNotes
-            project={project}
-            onUpdateProject={setProject}
+            project={activeProject}
+            onUpdateProject={handleUpdateProject}
             metrics={metrics}
             financials={financials}
+            isDemoMode={isDemoMode}
           />
         )}
 
         {/* When Printing: Also display the other core parts sequentially for the complete academic chapter! */}
         <div className="print-only hidden space-y-8">
           <FeasibilityEvaluationView
-            project={project}
+            project={activeProject}
             financials={financials}
             metrics={metrics}
           />
-          <SupportingSchedulesView project={project} financials={financials} />
+          <SupportingSchedulesView project={activeProject} financials={financials} />
           <NotesAndDefenseNotes
-            project={project}
-            onUpdateProject={setProject}
+            project={activeProject}
+            onUpdateProject={handleUpdateProject}
             metrics={metrics}
             financials={financials}
+            isDemoMode={isDemoMode}
           />
         </div>
       </main>
@@ -554,9 +679,10 @@ export default function App() {
         <BankInterestAndLoanModal
           isOpen={isBankModalOpen}
           onClose={() => setIsBankModalOpen(false)}
-          project={project}
-          onUpdateProject={setProject}
+          project={activeProject}
+          onUpdateProject={handleUpdateProject}
           financials={financials}
+          isDemoMode={isDemoMode}
         />
       )}
 
@@ -565,8 +691,9 @@ export default function App() {
         <CompanyAccountModal
           isOpen={isCompanyModalOpen}
           onClose={() => setIsCompanyModalOpen(false)}
-          project={project}
-          onUpdateProject={setProject}
+          project={activeProject}
+          onUpdateProject={handleUpdateProject}
+          isDemoMode={isDemoMode}
         />
       )}
 

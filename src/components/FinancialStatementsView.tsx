@@ -632,6 +632,35 @@ export default function FinancialStatementsView({
                       </td>
                     ))}
                   </tr>
+                  <tr>
+                    <td className="py-1 pl-4 text-slate-600">
+                      Increase / (Decrease) in Statutory Benefits Payable
+                    </td>
+                    {allYears.map((y) => (
+                      <td key={y.year} className="py-1 text-right font-financial text-slate-600">
+                        {formatCurrency(
+                          y.year === 0
+                            ? 0
+                            : (y.statutoryBenefitsPayable || 0) -
+                                (allYears[y.year - 1]?.statutoryBenefitsPayable || 0),
+                          c
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="py-1 pl-4 text-slate-600">Increase / (Decrease) in Income Tax Payable</td>
+                    {allYears.map((y) => (
+                      <td key={y.year} className="py-1 text-right font-financial text-slate-600">
+                        {formatCurrency(
+                          y.year === 0
+                            ? 0
+                            : (y.incomeTaxPayable || 0) - (allYears[y.year - 1]?.incomeTaxPayable || 0),
+                          c
+                        )}
+                      </td>
+                    ))}
+                  </tr>
                   <tr className="acc-subtotal font-semibold bg-slate-50/40">
                     <td className="py-1.5 pl-2">Net Cash Provided by / (Used in) Operating Activities</td>
                     {allYears.map((y) => (
@@ -980,6 +1009,36 @@ export default function FinancialStatementsView({
                     {allYears.map((y) => (
                       <td key={y.year} className="py-1 text-right font-financial">
                         {formatCurrency(y.accountsPayable, c)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="py-1 pl-4 text-slate-700">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pr-2">
+                        <span className="font-medium text-slate-800">Statutory Benefits Payable</span>
+                        <span className="text-[10px] font-normal text-slate-400 italic">
+                          (1 mo. SSS, Pag-IBIG, PhilHealth combined - ER &amp; EE)
+                        </span>
+                      </div>
+                    </td>
+                    {allYears.map((y) => (
+                      <td key={y.year} className="py-1 text-right font-financial">
+                        {formatCurrency(y.statutoryBenefitsPayable || 0, c)}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="py-1 pl-4 text-slate-700">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pr-2">
+                        <span>Income Tax Payable</span>
+                        <span className="text-[10px] font-normal text-slate-400 italic">
+                          (Paid in next taxable year)
+                        </span>
+                      </div>
+                    </td>
+                    {allYears.map((y) => (
+                      <td key={y.year} className="py-1 text-right font-financial">
+                        {formatCurrency(y.incomeTaxPayable || 0, c)}
                       </td>
                     ))}
                   </tr>

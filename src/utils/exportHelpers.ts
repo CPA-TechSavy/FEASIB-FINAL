@@ -158,6 +158,8 @@ export function exportToExcel(
 
         <tr class="section-hdr"><td colspan="7">LIABILITIES & EQUITY</td></tr>
         <tr><td>Accounts Payable</td>${financials.map(f => `<td class="num">${Math.round(f.accountsPayable).toLocaleString()}</td>`).join('')}</tr>
+        <tr><td>Statutory Benefits Payable (1 mo. SSS, Pag-IBIG, PhilHealth combined - ER & EE)</td>${financials.map(f => `<td class="num">${Math.round(f.statutoryBenefitsPayable || 0).toLocaleString()}</td>`).join('')}</tr>
+        <tr><td>Income Tax Payable (Paid in Next Taxable Year)</td>${financials.map(f => `<td class="num">${Math.round(f.incomeTaxPayable || 0).toLocaleString()}</td>`).join('')}</tr>
         <tr><td>Current Portion of Long-Term Debt</td>${financials.map(f => `<td class="num">${Math.round(f.currentPortionOfDebt).toLocaleString()}</td>`).join('')}</tr>
         <tr class="subtotal"><td>Total Current Liabilities</td>${financials.map(f => `<td class="num">${Math.round(f.totalCurrentLiabilities).toLocaleString()}</td>`).join('')}</tr>
         <tr><td>Long-Term Bank Loan</td>${financials.map(f => `<td class="num">${Math.round(f.longTermDebt).toLocaleString()}</td>`).join('')}</tr>

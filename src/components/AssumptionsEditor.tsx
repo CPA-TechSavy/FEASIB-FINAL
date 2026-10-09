@@ -57,6 +57,7 @@ import {
   Eye,
   FileText,
   Calendar,
+  Lock,
 } from 'lucide-react';
 import {
   formatCurrency,
@@ -85,6 +86,7 @@ interface AssumptionsEditorProps {
   project: FeasibilityProject;
   onUpdateProject: (p: FeasibilityProject) => void;
   onOpenBankModal?: () => void;
+  isDemoMode?: boolean;
 }
 
 type TabKey =
@@ -100,9 +102,17 @@ type TabKey =
 
 export default function AssumptionsEditor({
   project,
-  onUpdateProject,
+  onUpdateProject: originalUpdateProject,
   onOpenBankModal,
+  isDemoMode = false,
 }: AssumptionsEditorProps) {
+  const onUpdateProject = useCallback(
+    (p: FeasibilityProject) => {
+      if (isDemoMode) return;
+      originalUpdateProject(p);
+    },
+    [isDemoMode, originalUpdateProject]
+  );
   const [activeTab, setActiveTab] = useState<TabKey>('capital');
   const [selectedCostingProductId, setSelectedCostingProductId] = useState<string | undefined>(undefined);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -1082,7 +1092,22 @@ export default function AssumptionsEditor({
             </div>
           </div>
 
-          <div className="p-4 sm:p-6">
+          <div className={`p-4 sm:p-6 ${isDemoMode ? 'demo-readonly-inputs' : ''}`}>
+            {isDemoMode && (
+              <div className="mb-5 p-3.5 sm:p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 flex items-start gap-3 text-xs shadow-2xs">
+                <div className="p-1.5 rounded-lg bg-amber-100 text-amber-800 shrink-0 mt-0.5">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-extrabold uppercase tracking-wide text-amber-950 text-xs mb-0.5">
+                    Read-Only Demo Mode (Data Locked)
+                  </div>
+                  <div className="text-amber-900/90 leading-relaxed text-[11px] sm:text-xs">
+                    You are exploring pre-existing artisan cold brew beverage manufacturing feasibility data. All values, prices, BOM specifications, staffing wages, factory overhead, and capital parameters are displayed for demonstration and <strong>cannot be edited</strong>. Sign in with Google to create your own custom project.
+                  </div>
+                </div>
+              </div>
+            )}
             {/* TAB 1: CAPITAL OUTLAY & FINANCING */}
             {activeTab === 'capital' && (
               <div id="assumptions-tab-capital" className="space-y-6">
@@ -1868,6 +1893,7 @@ export default function AssumptionsEditor({
                   project={project}
                   onUpdateProject={onUpdateProject}
                   onNavigateToTab={handleNavigateToTab}
+                  isDemoMode={isDemoMode}
                 />
               </div>
             )}
@@ -1903,6 +1929,7 @@ export default function AssumptionsEditor({
                   onUpdateProject={onUpdateProject}
                   onNavigateToTab={handleNavigateToTab}
                   initialProductId={selectedCostingProductId}
+                  isDemoMode={isDemoMode}
                 />
               </div>
             )}

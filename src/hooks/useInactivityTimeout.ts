@@ -3,6 +3,14 @@ import { useEffect, useRef } from 'react';
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 const STORAGE_KEY = 'nobs_last_activity_time';
 
+export function resetInactivityTimer(): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, String(Date.now()));
+  } catch {
+    // ignore
+  }
+}
+
 interface UseInactivityTimeoutOptions {
   timeoutMs?: number;
   enabled: boolean;

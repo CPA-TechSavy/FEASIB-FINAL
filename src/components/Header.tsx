@@ -11,6 +11,8 @@ import {
   LogOut,
   User as UserIcon,
   ShieldCheck,
+  Lock,
+  Eye,
 } from 'lucide-react';
 import { CurrencySymbol, FeasibilityProject, YearFinancials, FeasibilityMetrics } from '../types';
 import { exportProjectJSON } from '../utils/exportHelpers';
@@ -33,6 +35,8 @@ interface HeaderProps {
     photoURL?: string | null;
   } | null;
   onSignOut?: () => void;
+  isDemoMode?: boolean;
+  onExitDemo?: () => void;
 }
 
 const CURRENCIES: { symbol: CurrencySymbol; label: string }[] = [
@@ -58,6 +62,8 @@ export default function Header({
   onOpenAdminModal,
   currentUser,
   onSignOut,
+  isDemoMode = false,
+  onExitDemo,
 }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
@@ -186,6 +192,12 @@ export default function Header({
                   <span className="hidden lg:inline font-extrabold text-sm lg:text-base tracking-tight text-white mr-1 select-none">
                     NoBS<span className="text-indigo-400">Feasibility</span>
                   </span>
+                  {isDemoMode && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/50 flex items-center gap-1 shadow-xs">
+                      <Lock className="w-3 h-3 text-amber-400" />
+                      <span>DEMO</span>
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={onOpenCompanyModal}
@@ -251,13 +263,18 @@ export default function Header({
                 <select
                   aria-label="Select Operating Currency"
                   value={project.currency}
-                  onChange={(e) =>
+                  disabled={isDemoMode}
+                  onChange={(e) => {
+                    if (isDemoMode) return;
                     onUpdateProject({
                       ...project,
                       currency: e.target.value as CurrencySymbol,
-                    })
-                  }
-                  className="absolute inset-0 opacity-0 lg:opacity-100 lg:static bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer py-0.5"
+                    });
+                  }}
+                  className={`absolute inset-0 opacity-0 lg:opacity-100 lg:static bg-transparent text-xs font-semibold text-white focus:outline-none py-0.5 ${
+                    isDemoMode ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
+                  }`}
+                  title={isDemoMode ? 'Currency is locked in Demo Mode' : undefined}
                 >
                   {CURRENCIES.map((c) => (
                     <option
@@ -297,12 +314,27 @@ export default function Header({
               {/* Upload .json file button: on mobile & tablet, shows icon ONLY */}
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  if (isDemoMode) {
+                    setNotification({
+                      type: 'error',
+                      message: 'File upload is disabled in Read-Only Demo Mode.',
+                    });
+                    setTimeout(() => setNotification(null), 3500);
+                    return;
+                  }
+                  fileInputRef.current?.click();
+                }}
+                disabled={isDemoMode}
                 aria-label="Upload .json file to restore encoded details"
-                title="Upload previously saved .json file to automatically populate all encoded information"
-                className="h-8 w-8 lg:h-9 lg:w-auto p-0 lg:px-2.5 text-xs rounded-lg bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-700/60 font-medium text-indigo-100 hover:text-white flex items-center justify-center transition cursor-pointer shadow-xs shrink-0"
+                title={isDemoMode ? "Upload is disabled in Demo Mode" : "Upload previously saved .json file to automatically populate all encoded information"}
+                className={`h-8 w-8 lg:h-9 lg:w-auto p-0 lg:px-2.5 text-xs rounded-lg border font-medium flex items-center justify-center transition shadow-xs shrink-0 ${
+                  isDemoMode
+                    ? 'bg-slate-800/40 border-slate-700/50 text-slate-500 cursor-not-allowed'
+                    : 'bg-indigo-950/70 hover:bg-indigo-900 border-indigo-700/60 text-indigo-100 hover:text-white cursor-pointer'
+                }`}
               >
-                <Upload className="w-4 h-4 text-indigo-300 shrink-0" />
+                <Upload className={`w-4 h-4 shrink-0 ${isDemoMode ? 'text-slate-500' : 'text-indigo-300'}`} />
                 <span className="hidden lg:inline ml-1.5">Upload</span>
               </button>
 
@@ -330,7 +362,7 @@ export default function Header({
               )}
 
               {/* Admin / Owner Control Hub Button (Visible to John Joebert Suarez) */}
-              {isAdmin && onOpenAdminModal && (
+              {!isDemoMode && isAdmin && onOpenAdminModal && (
                 <button
                   type="button"
                   onClick={onOpenAdminModal}
@@ -343,8 +375,31 @@ export default function Header({
                 </button>
               )}
 
-              {/* User Account & Sign Out */}
-              {currentUser && (
+              {/* User Account / Demo Status & Sign Out */}
+              {isDemoMode ? (
+                <div className="flex items-center gap-1.5 pl-1.5 lg:pl-2 border-l border-slate-700/80 shrink-0">
+                  <div
+                    className="flex items-center justify-center gap-1.5 h-8 lg:h-9 px-2 rounded-lg bg-amber-950/70 border border-amber-600/70 max-w-[130px] lg:max-w-[170px] overflow-hidden shrink-0 text-amber-200"
+                    title="Demo Guest User (Read-Only Mode)"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="text-[11px] font-bold truncate">Demo Mode</span>
+                  </div>
+
+                  {onExitDemo && (
+                    <button
+                      type="button"
+                      onClick={onExitDemo}
+                      aria-label="Exit Demo Mode"
+                      title="Exit Demo Mode and return to sign in"
+                      className="h-8 lg:h-9 px-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-xs shrink-0"
+                    >
+                      <LogOut className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden sm:inline">Exit Demo</span>
+                    </button>
+                  )}
+                </div>
+              ) : currentUser ? (
                 <div className="flex items-center gap-1.5 pl-1.5 lg:pl-2 border-l border-slate-700/80 shrink-0">
                   <div
                     className="flex items-center justify-center gap-1.5 h-8 w-8 lg:h-9 lg:w-auto p-0 lg:px-2 rounded-lg bg-slate-800/80 border border-slate-700 max-w-[120px] lg:max-w-[180px] overflow-hidden shrink-0"
@@ -378,7 +433,7 @@ export default function Header({
                     </button>
                   )}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

@@ -35,6 +35,7 @@ interface BankInterestAndLoanModalProps {
   project: FeasibilityProject;
   onUpdateProject: (p: FeasibilityProject) => void;
   financials: YearFinancials[];
+  isDemoMode?: boolean;
 }
 
 type ModalTab = 'overview' | 'savings' | 'loan' | 'monthly';
@@ -45,6 +46,7 @@ export default function BankInterestAndLoanModal({
   project,
   onUpdateProject,
   financials,
+  isDemoMode = false,
 }: BankInterestAndLoanModalProps) {
   const [activeTab, setActiveTab] = useState<ModalTab>('overview');
   const [monthlyYearView, setMonthlyYearView] = useState<number>(1);

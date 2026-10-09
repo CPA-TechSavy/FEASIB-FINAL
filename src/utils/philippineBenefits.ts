@@ -191,6 +191,154 @@ export function getPagIbigEmployerShare(monthlySalary: number): {
   };
 }
 
+/**
+ * Calculates the complete statutory contributions (both Employee and Employer portions combined)
+ * for SSS, PhilHealth, and Pag-IBIG for a given monthly basic wage/salary.
+ */
+export function getStatutoryContributionBothShares(monthlySalary: number): {
+  monthlySalary: number;
+  // SSS
+  sssEr: number;
+  sssEe: number;
+  sssTotal: number;
+  // PhilHealth
+  philHealthEr: number;
+  philHealthEe: number;
+  philHealthTotal: number;
+  // Pag-IBIG
+  pagIbigEr: number;
+  pagIbigEe: number;
+  pagIbigTotal: number;
+  // Totals per head
+  totalEr: number;
+  totalEe: number;
+  combinedTotalMonthly: number;
+} {
+  const salary = Math.max(0, monthlySalary || 0);
+
+  // 1. SSS (Official SSS table with regular + WISP + EC)
+  const matched =
+    SSS_CONTRIBUTION_TABLE.find(
+      (b) => salary >= b.minSalary && salary <= b.maxSalary
+    ) || SSS_CONTRIBUTION_TABLE[SSS_CONTRIBUTION_TABLE.length - 1];
+  const sssEr = matched.totalEr;
+  const sssEe = matched.totalEe;
+  const sssTotal = matched.totalContribution;
+
+  // 2. PhilHealth (5% total premium divided equally: 2.5% ER, 2.5% EE; ₱10,000 floor, ₱100,000 ceiling)
+  const phSalary = Math.min(100000, Math.max(10000, salary));
+  const philHealthEr = Math.round(phSalary * 0.025 * 100) / 100;
+  const philHealthEe = Math.round(phSalary * 0.025 * 100) / 100;
+  const philHealthTotal = Math.round((philHealthEr + philHealthEe) * 100) / 100;
+
+  // 3. Pag-IBIG (2% ER, 2% EE; ₱10,000 ceiling)
+  const piSalary = Math.min(10000, salary);
+  const pagIbigEr = Math.round(piSalary * 0.02 * 100) / 100;
+  const pagIbigEe = Math.round(piSalary * 0.02 * 100) / 100;
+  const pagIbigTotal = Math.round((pagIbigEr + pagIbigEe) * 100) / 100;
+
+  const totalEr = Math.round((sssEr + philHealthEr + pagIbigEr) * 100) / 100;
+  const totalEe = Math.round((sssEe + philHealthEe + pagIbigEe) * 100) / 100;
+  const combinedTotalMonthly = Math.round((sssTotal + philHealthTotal + pagIbigTotal) * 100) / 100;
+
+  return {
+    monthlySalary: salary,
+    sssEr,
+    sssEe,
+    sssTotal,
+    philHealthEr,
+    philHealthEe,
+    philHealthTotal,
+    pagIbigEr,
+    pagIbigEe,
+    pagIbigTotal,
+    totalEr,
+    totalEe,
+    combinedTotalMonthly,
+  };
+}
+
+/**
+ * Computes the 1-month equivalent statutory benefits payable (SSS, PhilHealth, Pag-IBIG combined,
+ * reflecting the total of both Employee and Employer shares) across all personnel:
+ * Direct Labor, Indirect Labor, and Non-Manufacturing Personnel.
+ * Incurred in December and remitted to agencies in January of the following year.
+ */
+export function calculateCompanyStatutoryBenefitsPayable(
+  directLabor: Array<{ monthlyWage?: number; headcount?: number }>,
+  indirectLabor: Array<{ monthlyWage?: number; headcount?: number }>,
+  nonMfgLabor: Array<{ monthlyWage?: number; headcount?: number }>
+): {
+  sssPayable: number;
+  philhealthPayable: number;
+  pagibigPayable: number;
+  totalStatutoryBenefitsPayable: number;
+  totalErPortion: number;
+  totalEePortion: number;
+  dlPortion: number;
+  idlPortion: number;
+  nonMfgPortion: number;
+} {
+  let sssPayable = 0;
+  let philhealthPayable = 0;
+  let pagibigPayable = 0;
+  let totalErPortion = 0;
+  let totalEePortion = 0;
+  let dlPortion = 0;
+  let idlPortion = 0;
+  let nonMfgPortion = 0;
+
+  const processGroup = (
+    list: Array<{ monthlyWage?: number; headcount?: number }>,
+    isDl = false,
+    isIdl = false
+  ) => {
+    (list || []).forEach((item) => {
+      const wage = item.monthlyWage || 0;
+      const count = Math.max(1, item.headcount || 1);
+      const stat = getStatutoryContributionBothShares(wage);
+
+      const sssRole = stat.sssTotal * count;
+      const phRole = stat.philHealthTotal * count;
+      const piRole = stat.pagIbigTotal * count;
+      const erRole = stat.totalEr * count;
+      const eeRole = stat.totalEe * count;
+      const combinedRole = stat.combinedTotalMonthly * count;
+
+      sssPayable += sssRole;
+      philhealthPayable += phRole;
+      pagibigPayable += piRole;
+      totalErPortion += erRole;
+      totalEePortion += eeRole;
+
+      if (isDl) dlPortion += combinedRole;
+      else if (isIdl) idlPortion += combinedRole;
+      else nonMfgPortion += combinedRole;
+    });
+  };
+
+  processGroup(directLabor, true, false);
+  processGroup(indirectLabor, false, true);
+  processGroup(nonMfgLabor, false, false);
+
+  const roundedSss = Math.round(sssPayable);
+  const roundedPh = Math.round(philhealthPayable);
+  const roundedPi = Math.round(pagibigPayable);
+  const totalStatutoryBenefitsPayable = roundedSss + roundedPh + roundedPi;
+
+  return {
+    sssPayable: roundedSss,
+    philhealthPayable: roundedPh,
+    pagibigPayable: roundedPi,
+    totalStatutoryBenefitsPayable,
+    totalErPortion: Math.round(totalErPortion),
+    totalEePortion: Math.round(totalEePortion),
+    dlPortion: Math.round(dlPortion),
+    idlPortion: Math.round(idlPortion),
+    nonMfgPortion: Math.round(nonMfgPortion),
+  };
+}
+
 export interface ProductionEmployeeBenefitRecord {
   id: string;
   sourceId: string;

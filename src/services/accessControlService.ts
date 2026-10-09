@@ -15,6 +15,13 @@ export const ADMIN_EMAILS = [
 ];
 export const ADMIN_EMAIL = 'suarezjohnjoebert@gmail.com';
 export const ADMIN_CPA_EMAIL = 'suarezjohnjoebertcpa@gmail.com';
+export const DEMO_USER_EMAIL = 'demo@nobsfeasibility.com';
+
+export function isDemoUser(email?: string | null): boolean {
+  if (!email) return false;
+  const clean = email.toLowerCase().trim();
+  return clean === DEMO_USER_EMAIL || clean.startsWith('demo@');
+}
 
 export interface AccessRequestRecord {
   email: string;
@@ -117,6 +124,11 @@ export async function checkAccessStatus(
     return { status: 'approved' };
   }
 
+  // Demo Guest Profile does not need owner approval
+  if (isDemoUser(cleanEmail)) {
+    return { status: 'approved' };
+  }
+
   const docKey = sanitizeEmailKey(cleanEmail);
   const docRef = doc(db, 'access_requests', docKey);
 
@@ -142,6 +154,20 @@ export async function requestWebsiteAccess(user: {
   photoURL?: string | null;
 }): Promise<AccessRequestRecord> {
   const cleanEmail = user.email.toLowerCase().trim();
+
+  // Demo users do not need owner approval
+  if (isDemoUser(cleanEmail)) {
+    return {
+      email: cleanEmail,
+      displayName: user.displayName || 'Demo Guest User',
+      photoURL: user.photoURL || '',
+      status: 'approved',
+      requestedAt: new Date().toISOString(),
+      approvedAt: new Date().toISOString(),
+      approvalToken: 'demo-token',
+    };
+  }
+
   const docKey = sanitizeEmailKey(cleanEmail);
   const docRef = doc(db, 'access_requests', docKey);
 
@@ -193,7 +219,7 @@ export function subscribeToAccessApproval(
   onStatusChange: (status: 'pending' | 'approved' | 'rejected') => void
 ): () => void {
   const cleanEmail = email.toLowerCase().trim();
-  if (checkIsAdmin(cleanEmail)) {
+  if (checkIsAdmin(cleanEmail) || isDemoUser(cleanEmail)) {
     onStatusChange('approved');
     return () => {};
   }

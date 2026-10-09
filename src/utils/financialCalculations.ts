@@ -7,10 +7,12 @@ import {
   LaborBenefitItem,
   DirectLaborItem,
   IndirectLaborItem,
+  NonManufacturingLaborItem,
 } from '../types';
 import {
   compileProductionEmployeeBenefits,
   compileNonManufacturingEmployeeBenefits,
+  calculateCompanyStatutoryBenefitsPayable,
 } from './philippineBenefits';
 
 /**
@@ -434,6 +436,11 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
     netPPE: totalCapex,
     totalAssets: year0PaidInCapital + year0Loan - totalCapex - totalPreOperating + totalCapex,
     accountsPayable: 0,
+    statutoryBenefitsPayable: 0,
+    incomeTaxPayable: 0,
+    sssPayable: 0,
+    philhealthPayable: 0,
+    pagibigPayable: 0,
     currentPortionOfDebt: loanSchedule[0] ? loanSchedule[0].principalRepayment : 0,
     totalCurrentLiabilities: loanSchedule[0] ? loanSchedule[0].principalRepayment : 0,
     longTermDebt: Math.max(0, year0Loan - (loanSchedule[0] ? loanSchedule[0].principalRepayment : 0)),
@@ -458,6 +465,8 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
   let prevAR = 0;
   let prevInventory = 0;
   let prevAP = 0;
+  let prevStatutoryBenefitsPayable = 0;
+  let prevIncomeTaxPayable = 0;
   let cumulativeRetainedEarnings = year0.retainedEarnings;
 
   for (let yr = 1; yr <= 5; yr++) {
@@ -533,29 +542,29 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
       });
     }
 
+    // Project direct and indirect labor wages for year yr taking into account custom annual salary increase
+    const projectedDl = (project.directLabor || []).map((lab) => {
+      const calc = calculateLaborItemWageForYear(lab, project, yr);
+      return {
+        ...lab,
+        monthlyWage: calc.monthlyWage,
+      };
+    });
+
+    const projectedIdl = (project.indirectLabor || []).map((lab) => {
+      const calc = calculateLaborItemWageForYear(lab, project, yr);
+      return {
+        ...lab,
+        monthlyWage: calc.monthlyWage,
+      };
+    });
+
     // Production Labor Benefits (Direct & Indirect)
     let factoryLaborBenefits = 0;
     let productionStatutoryBenefits = 0;
     let additionalNonStatutoryBenefits = 0;
     const includeBenefitsInCOGS = project.includeLaborBenefitsInCOGS !== false;
     if (includeBenefitsInCOGS) {
-      // Project direct and indirect labor wages for year yr taking into account custom annual salary increase
-      const projectedDl = (project.directLabor || []).map((lab) => {
-        const calc = calculateLaborItemWageForYear(lab, project, yr);
-        return {
-          ...lab,
-          monthlyWage: calc.monthlyWage,
-        };
-      });
-
-      const projectedIdl = (project.indirectLabor || []).map((lab) => {
-        const calc = calculateLaborItemWageForYear(lab, project, yr);
-        return {
-          ...lab,
-          monthlyWage: calc.monthlyWage,
-        };
-      });
-
       const { summary: statSummary } = compileProductionEmployeeBenefits(
         projectedDl,
         projectedIdl
@@ -665,8 +674,9 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
     let opexNonStatutoryBenefits = 0;
 
     // Non-Manufacturing personnel
+    let projectedNonMfg: NonManufacturingLaborItem[] = [];
     if (project.nonManufacturingLabor && project.nonManufacturingLabor.length > 0) {
-      const projectedNonMfg = project.nonManufacturingLabor.map((emp) => ({
+      projectedNonMfg = project.nonManufacturingLabor.map((emp) => ({
         ...emp,
         monthlyWage: calculateLaborMonthlyWageForYear(
           emp.monthlyWage,
@@ -778,13 +788,38 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
     const inventory = totalCOGS * (project.workingCapital.inventoryPercentOfCOGS / 100);
     const accountsPayable = directMaterials * (project.workingCapital.accountsPayablePercentOfPurchases / 100);
 
+    // Statutory Benefits Payable: 1-month equivalent combined (ER + EE) SSS, PhilHealth, Pag-IBIG for December
+    // Incurred in December and paid the following month (January of next taxable year)
+    const statPayableBreakdown = calculateCompanyStatutoryBenefitsPayable(
+      projectedDl,
+      projectedIdl,
+      projectedNonMfg
+    );
+    const statutoryBenefitsPayable = statPayableBreakdown.totalStatutoryBenefitsPayable;
+    const sssPayable = statPayableBreakdown.sssPayable;
+    const philhealthPayable = statPayableBreakdown.philhealthPayable;
+    const pagibigPayable = statPayableBreakdown.pagibigPayable;
+
+    // Income tax computed for the taxable year is accrued and will be paid in the next taxable year
+    const incomeTaxPayable = taxExpense;
+
     const deltaAR = accountsReceivable - prevAR;
     const deltaInv = inventory - prevInventory;
     const deltaAP = accountsPayable - prevAP;
+    const deltaStatutoryBenefitsPayable = statutoryBenefitsPayable - prevStatutoryBenefitsPayable;
+    const deltaIncomeTaxPayable = incomeTaxPayable - prevIncomeTaxPayable;
 
     // 7. Cash Flow Statement (Indirect Method)
-    // Operating Cash Flow = Net Income + Non-cash Depreciation - ΔAR - ΔInventory + ΔAP
-    const operatingCashFlow = netIncome + totalYearDepreciation - deltaAR - deltaInv + deltaAP;
+    // Operating Cash Flow = Net Income + Non-cash Depreciation - ΔAR - ΔInventory + ΔAP + ΔStatutoryBenefitsPayable + ΔIncomeTaxPayable
+    // Note: Accruing statutory benefits and tax payable defers cash outflow to the subsequent month/year
+    const operatingCashFlow =
+      netIncome +
+      totalYearDepreciation -
+      deltaAR -
+      deltaInv +
+      deltaAP +
+      deltaStatutoryBenefitsPayable +
+      deltaIncomeTaxPayable;
     
     // Investing Cash Flow (Year 1-5 has 0 major capex in typical undergraduate base model)
     const investingCashFlow = 0;
@@ -816,10 +851,14 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
     const netPPE = Math.max(0, grossPPE - accumulatedDepreciation);
     const totalAssets = totalCurrentAssets + netPPE;
 
-    // Debt
+    // Debt & Liabilities
     const nextLoanRow = loanSchedule[yr] || { principalRepayment: 0 };
     const currentPortionOfDebt = Math.min(loanRow.endingBalance, nextLoanRow.principalRepayment);
-    const totalCurrentLiabilities = accountsPayable + currentPortionOfDebt;
+    const totalCurrentLiabilities =
+      accountsPayable +
+      statutoryBenefitsPayable +
+      incomeTaxPayable +
+      currentPortionOfDebt;
     const longTermDebt = Math.max(0, loanRow.endingBalance - currentPortionOfDebt);
     const totalLiabilities = totalCurrentLiabilities + longTermDebt;
 
@@ -935,6 +974,11 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
       netPPE,
       totalAssets,
       accountsPayable,
+      statutoryBenefitsPayable,
+      incomeTaxPayable,
+      sssPayable,
+      philhealthPayable,
+      pagibigPayable,
       currentPortionOfDebt,
       totalCurrentLiabilities,
       longTermDebt,
@@ -959,6 +1003,8 @@ export function calculate5YearFinancials(project: FeasibilityProject): YearFinan
     prevAR = accountsReceivable;
     prevInventory = inventory;
     prevAP = accountsPayable;
+    prevStatutoryBenefitsPayable = statutoryBenefitsPayable;
+    prevIncomeTaxPayable = incomeTaxPayable;
   }
 
   return results;

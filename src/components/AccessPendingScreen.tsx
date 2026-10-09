@@ -9,6 +9,8 @@ import {
   RefreshCw,
   Send,
   AlertTriangle,
+  Eye,
+  Sparkles,
 } from 'lucide-react';
 import {
   ADMIN_EMAIL,
@@ -26,6 +28,7 @@ interface AccessPendingScreenProps {
   requestRecord?: AccessRequestRecord;
   onApproved: () => void;
   onSignOut: () => void;
+  onStartDemo?: () => void;
 }
 
 export default function AccessPendingScreen({
@@ -33,6 +36,7 @@ export default function AccessPendingScreen({
   requestRecord,
   onApproved,
   onSignOut,
+  onStartDemo,
 }: AccessPendingScreenProps) {
   const [reminderSent, setReminderSent] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -152,6 +156,17 @@ export default function AccessPendingScreen({
 
         {/* Action Controls */}
         <div className="space-y-3 pt-2">
+          {onStartDemo && (
+            <button
+              type="button"
+              onClick={onStartDemo}
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-slate-950 font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Eye className="w-4 h-4 text-slate-950" />
+              <span>Use Demo Guest Profile (No Approval Needed)</span>
+            </button>
+          )}
+
           {reminderSent ? (
             <div className="w-full py-2.5 px-4 rounded-xl bg-emerald-950/80 border border-emerald-600/70 text-emerald-200 text-xs font-semibold flex items-center justify-center gap-2">
               <CheckCircle className="w-4 h-4 text-emerald-400" />

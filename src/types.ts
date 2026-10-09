@@ -340,10 +340,12 @@ export interface YearFinancials {
   totalAssets: number;
 
   accountsPayable: number;
+  statutoryBenefitsPayable: number; // 1-month equivalent combined (ER + EE) SSS, PhilHealth, Pag-IBIG for December paid in January next year
+  incomeTaxPayable: number; // Income Tax computed payable in next taxable year
   salariesPayable?: number; // Last month (Month 12) accrued wages payable
-  sssPayable?: number; // Last month (Month 12) SSS Employer share payable
-  philhealthPayable?: number; // Last month (Month 12) PhilHealth Employer share payable
-  pagibigPayable?: number; // Last month (Month 12) Pag-IBIG Employer share payable
+  sssPayable?: number; // 1-month SSS combined (ER + EE) payable
+  philhealthPayable?: number; // 1-month PhilHealth combined (ER + EE) payable
+  pagibigPayable?: number; // 1-month Pag-IBIG combined (ER + EE) payable
   currentPortionOfDebt: number;
   totalCurrentLiabilities: number;
   longTermDebt: number;

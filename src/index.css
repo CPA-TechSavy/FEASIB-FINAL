@@ -64,3 +64,32 @@
     border-top: 1px solid #475569 !important;
   }
 }
+
+/* Demo Mode (Read-Only) Guardrails */
+.demo-readonly-inputs input,
+.demo-readonly-inputs select,
+.demo-readonly-inputs textarea {
+  pointer-events: none !important;
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+  cursor: not-allowed !important;
+  border-color: #cbd5e1 !important;
+  opacity: 0.9 !important;
+  user-select: text !important;
+}
+
+.demo-readonly-inputs input:focus,
+.demo-readonly-inputs select:focus,
+.demo-readonly-inputs textarea:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.demo-readonly-inputs button[data-action="mutate"],
+.demo-readonly-inputs button.btn-destructive,
+.demo-readonly-inputs button.btn-add,
+.demo-disabled-btn {
+  pointer-events: none !important;
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
